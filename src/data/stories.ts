@@ -1,0 +1,57 @@
+import type { Story } from "@/types/story";
+
+export const mockStories: Story[] = [
+  {
+    id: "story-1",
+    title: "今天天气很好",
+    titlePinyin: "Jīntiān tiānqì hěn hǎo",
+    titleTranslation: "The weather is very nice today",
+    difficulty: 1,
+    thumbnail: "/thumbnails/sunny.svg",
+    audioUrl: "/audio/story-1.mp3",
+    sentences: [
+      { start: 0, end: 2.5, text: "你好！我是小明。", pinyin: "Nǐ hǎo! Wǒ shì Xiǎo Míng.", translation: "Hello! I am Xiaoming." },
+      { start: 2.5, end: 5.5, text: "今天天气很好。", pinyin: "Jīntiān tiānqì hěn hǎo.", translation: "The weather is very nice today." },
+      { start: 5.5, end: 8.5, text: "太阳很大。", pinyin: "Tàiyáng hěn dà.", translation: "The sun is very bright." },
+      { start: 8.5, end: 11.5, text: "我去公园。", pinyin: "Wǒ qù gōngyuán.", translation: "I go to the park." },
+      { start: 11.5, end: 15.5, text: "公园里有很多人。", pinyin: "Gōngyuán lǐ yǒu hěn duō rén.", translation: "There are many people in the park." },
+      { start: 15.5, end: 20, text: "我喜欢在公园里走路。", pinyin: "Wǒ xǐhuan zài gōngyuán lǐ zǒulù.", translation: "I like walking in the park." },
+      { start: 20, end: 24, text: "我也喜欢学习中文。", pinyin: "Wǒ yě xǐhuan xuéxí Zhōngwén.", translation: "I also like to study Chinese." },
+      { start: 24, end: 26, text: "再见！", pinyin: "Zàijiàn!", translation: "Goodbye!" },
+    ],
+  },
+  {
+    id: "story-2",
+    title: "我的家人",
+    titlePinyin: "Wǒ de jiārén",
+    titleTranslation: "My family",
+    difficulty: 1,
+    thumbnail: "/thumbnails/family.svg",
+    sentences: [
+      { start: 0, end: 3, text: "这是我的爸爸。", pinyin: "Zhè shì wǒ de bàba.", translation: "This is my father." },
+      { start: 3, end: 6, text: "这是我的妈妈。", pinyin: "Zhè shì wǒ de māma.", translation: "This is my mother." },
+      { start: 6, end: 10, text: "我爸爸是老师。", pinyin: "Wǒ bàba shì lǎoshī.", translation: "My father is a teacher." },
+      { start: 10, end: 14, text: "我妈妈是医生。", pinyin: "Wǒ māma shì yīshēng.", translation: "My mother is a doctor." },
+      { start: 14, end: 18, text: "我有一个哥哥。", pinyin: "Wǒ yǒu yī ge gēge.", translation: "I have an older brother." },
+      { start: 18, end: 22, text: "我有很多朋友。", pinyin: "Wǒ yǒu hěn duō péngyou.", translation: "I have many friends." },
+      { start: 22, end: 27, text: "我们一家人很幸福。", pinyin: "Wǒmen yī jiā rén hěn xìngfú.", translation: "Our family is very happy." },
+    ],
+  },
+  {
+    id: "story-3",
+    title: "我的爱好",
+    titlePinyin: "Wǒ de àihào",
+    titleTranslation: "My hobbies",
+    difficulty: 1,
+    thumbnail: "/thumbnails/hobby.svg",
+    sentences: [
+      { start: 0, end: 3, text: "我叫李华。", pinyin: "Wǒ jiào Lǐ Huá.", translation: "My name is Li Hua." },
+      { start: 3, end: 7, text: "我每天都很忙。", pinyin: "Wǒ měi tiān dōu hěn máng.", translation: "I am very busy every day." },
+      { start: 7, end: 11, text: "早上我喝咖啡。", pinyin: "Zǎoshang wǒ hē kāfēi.", translation: "In the morning I drink coffee." },
+      { start: 11, end: 15, text: "然后我去工作。", pinyin: "Ránhòu wǒ qù gōngzuò.", translation: "Then I go to work." },
+      { start: 15, end: 19, text: "晚上我喜欢看书。", pinyin: "Wǎnshang wǒ xǐhuan kàn shū.", translation: "In the evening I like to read books." },
+      { start: 19, end: 23, text: "周末我和朋友吃饭。", pinyin: "Zhōumò wǒ hé péngyou chī fàn.", translation: "On weekends I eat with friends." },
+      { start: 23, end: 26, text: "生活很美好！", pinyin: "Shēnghuó hěn měihǎo!", translation: "Life is wonderful!" },
+    ],
+  },
+];

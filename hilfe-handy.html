@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handy erreicht App nicht – Hilfe</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 580px; margin: 2rem auto; padding: 1rem; line-height: 1.6; }
+    h1 { font-size: 1.35rem; }
+    h2 { font-size: 1.1rem; margin-top: 1.5rem; }
+    ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+    code { background: #f0f0f0; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.95em; }
+    .box { background: #fff8e6; border: 1px solid #e6d9b8; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    .steps { background: #e8f4f0; border: 1px solid #b8e6d4; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+    .steps ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .steps li { margin-bottom: 0.5rem; }
+    a { color: #2563eb; }
+    .why { font-size: 0.9rem; color: #555; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Zugriff vom Handy – Anleitung &amp; Checkliste</h1>
+
+  <p><strong>Kurz:</strong> Der PC stellt die App per WLAN bereit. Das Handy muss dieselbe Adresse im Browser aufrufen wie der PC – nur mit der <strong>PC-IP</strong> statt <code>localhost</code>.</p>
+
+  <div class="steps">
+    <strong>Schritt-für-Schritt (in dieser Reihenfolge):</strong>
+    <ol>
+      <li><strong>firewall-freigabe.bat</strong> einmal als Administrator ausführen (Rechtsklick → „Als Administrator ausführen“). Damit erlaubt Windows eingehende Verbindungen auf Port 8080.</li>
+      <li><strong>start-server.bat</strong> starten. Das Fenster „Kan Mandarin Server“ <strong>offen lassen</strong>. Es zeigt Adressen wie <code>http://192.168.1.100:8080/app-standalone.html</code>.</li>
+      <li>Am PC prüfen: <code>ipconfig</code> in der Eingabeaufforderung – unter „Drahtlos-LAN“ oder „WLAN“ die <strong>IPv4-Adresse</strong> notieren (z. B. 192.168.1.100).</li>
+      <li>Auf dem Handy: <strong>gleiches WLAN</strong> wie der PC (kein Gäste-WLAN). Im Browser eine der angezeigten Adressen eingeben, z. B. <code>http://192.168.1.100:8080/app-standalone.html</code>.</li>
+    </ol>
+  </div>
+
+  <h2>„Verbindung abgelehnt“ (ERR_CONNECTION_REFUSED)?</h2>
+  <p>Das heißt: Das Handy erreicht den PC nicht auf Port 8080. Typische Ursachen:</p>
+  <ul>
+    <li><strong>Server lauscht nur auf dem PC (localhost)</strong> – dann muss <strong>server.py</strong> laufen (nicht nur „python -m http.server“ ohne Option). <strong>start-server.bat</strong> startet server.py zuerst; das Fenster „Kan Mandarin Server“ muss offen sein. Einmal <strong>start-server.bat</strong> neu starten.</li>
+    <li><strong>Firewall blockiert</strong> – einmal <strong>firewall-freigabe.bat</strong> als <strong>Administrator</strong> ausführen, dann Server neu starten.</li>
+    <li><strong>Falsche Adresse</strong> – auf dem Handy die <strong>IPv4-Adresse des PC</strong> verwenden (am PC <code>ipconfig</code> eingeben, unter WLAN/Drahtlos-LAN nachsehen), z. B. <code>http://192.168.1.100:8080/app-standalone.html</code>.</li>
+  </ul>
+
+  <h2>Warum kommt das Handy nicht ran?</h2>
+  <p>Der Server läuft <strong>auf dem PC</strong> und hört auf Port 8080. Damit das Handy ihn erreicht, müssen drei Dinge stimmen:</p>
+  <ul>
+    <li><strong>Windows-Firewall</strong> lässt Verbindungen auf Port 8080 zu → Lösung: <strong>firewall-freigabe.bat</strong> als Admin ausführen.</li>
+    <li><strong>Beide Geräte im gleichen Netz</strong> (gleiches WLAN, keine Client-Isolierung im Router) → Handy und PC im selben WLAN; Router-Option „Client-Isolierung“ / „AP-Isolierung“ ausschalten.</li>
+    <li><strong>Richtige Adresse</strong> → Am PC die echte IPv4-Adresse nehmen (nicht 127.0.0.1), z. B. <code>http://192.168.1.100:8080/app-standalone.html</code>.</li>
+  </ul>
+
+  <h2>1. Welche IP-Adresse? (mehrere angezeigt)</h2>
+  <p>Der PC hat oft <strong>mehrere</strong> IP-Adressen (WLAN, VPN, Virtualisierung). Fürs Handy im <strong>gleichen WLAN</strong> brauchst du die <strong>WLAN-IP</strong>:</p>
+  <ul>
+    <li><strong>192.168.x.x</strong> (z. B. 192.168.178.24) = meist dein normales Heim-WLAN → <strong>diese zuerst probieren</strong>.</li>
+    <li>10.x.x.x, 172.x.x.x = oft VPN, Docker, WSL – Handy erreicht den PC darüber oft nicht.</li>
+    <li>169.254.x.x = Ersatz-Adresse ohne Router – meist nicht die richtige.</li>
+  </ul>
+  <p>Auf dem Handy im Browser eingeben: <code>http://192.168.178.24:8080/app-standalone.html</code> (deine 192.168.x.x-IP einsetzen).</p>
+  <p class="why">Wenn der PC per Kabel und WLAN verbunden ist, kann es zwei 192.168.x.x-Adressen geben – beide probieren.</p>
+
+  <h2>2. Seite ist „leer“ (weiß, nichts zu sehen)</h2>
+  <p>Wenn die Verbindung klappt, aber die Seite <strong>leer</strong> bleibt:</p>
+  <ul>
+    <li>Zuerst <strong>Startseite</strong> öffnen: <code>http://192.168.178.24:8080/</code> (deine IP), dann auf „App starten“ tippen.</li>
+    <li>Oder direkt: <code>http://192.168.178.24:8080/app-standalone.html</code> – genau so eingeben (kein https, Port 8080).</li>
+    <li>Im Handy-Browser: JavaScript aktiviert lassen, keine „Datenspar“- oder Blockmodi für diese Seite.</li>
+  </ul>
+
+  <h2>3. Gleiches WLAN</h2>
+  <ul>
+    <li>PC und Handy im <strong>gleichen WLAN</strong> (gleicher Name; kein Gäste-WLAN, wenn der PC im Haupt-WLAN ist).</li>
+    <li>Router: <strong>„Client-Isolierung“</strong> / <strong>„AP-Isolierung“</strong> / „Wireless Isolation“ <strong>aus</strong>. Sonst können sich Geräte im WLAN nicht untereinander erreichen. Einstellung meist unter 192.168.1.1 oder 192.168.0.1 im Browser.</li>
+  </ul>
+
+  <h2>4. Windows: Netzwerkprofil „Privat“</h2>
+  <p>Wenn das WLAN als <strong>„Öffentliches Netzwerk“</strong> gilt, blockiert Windows oft Zugriffe von anderen Geräten.</p>
+  <p><strong>Einstellungen</strong> → <strong>Netzwerk und Internet</strong> → <strong>WLAN</strong> → dein Netzwerk anklicken → unter „Netzwerkprofil“ auf <strong>„Privat“</strong> stellen.</p>
+
+  <h2>5. Firewall-Regel</h2>
+  <p><strong>firewall-freigabe.bat</strong> einmal <strong>als Administrator ausführen</strong> (Rechtsklick → „Als Administrator ausführen“). Danach <strong>start-server.bat</strong> neu starten.</p>
+
+  <h2>6. Server-Fenster offen lassen</h2>
+  <p>Das Fenster <strong>„Kan Mandarin Server“</strong> muss <strong>offen bleiben</strong>. Schließt du es, ist die App vom Handy aus nicht mehr erreichbar.</p>
+
+  <div class="box">
+    <strong>Test:</strong> Auf dem Handy im Browser (z. B. Chrome) genau eingeben (deine PC-IP einsetzen):<br>
+    <code>http://DEINE-PC-IP:8080/app-standalone.html</code>
+  </div>
+
+  <p><a href="app-standalone.html">← Zurück zur App</a></p>
+</body>
+</html>

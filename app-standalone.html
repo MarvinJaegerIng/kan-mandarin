@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kan Mandarin – Chinesisch lesen</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #1a1a1a; }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+    .sidebar { width: 224px; flex-shrink: 0; border-right: 1px solid #e5e5e5; background: #fff; padding: 12px; transition: width 0.2s; }
+    .sidebar.hidden { width: 0; padding: 0; overflow: hidden; border: none; }
+    .sidebar a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #666; font-weight: 500; margin-bottom: 4px; }
+    .sidebar a:hover { background: #f0f0f0; color: #1a1a1a; }
+    .sidebar a.active { background: #2563eb; color: #fff; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .header { flex-shrink: 0; border-bottom: 1px solid #e5e5e5; padding: 8px 16px; display: flex; align-items: center; gap: 8px; background: #fff; }
+    .header button { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 6px; color: #666; }
+    .header button:hover { background: #f0f0f0; color: #1a1a1a; }
+    .content { flex: 1; overflow: auto; padding: 24px; max-width: 42rem; margin: 0 auto; display: flex; flex-direction: column; }
+    .screen { display: none; }
+    .screen.active { display: block; flex: 1; min-height: 0; overflow: auto; }
+    .story-card { display: flex; gap: 16px; padding: 16px; border: 1px solid #e5e5e5; border-radius: 12px; background: #fff; margin-bottom: 16px; text-decoration: none; color: inherit; transition: background 0.15s; }
+    .story-card:hover { background: #f5f5f5; }
+    .story-card .icon { width: 80px; height: 80px; background: #eee; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; flex-shrink: 0; }
+    .story-card h2 { margin: 0; font-size: 1.1rem; }
+    .story-card .pinyin { font-size: 0.9rem; color: #666; margin-top: 4px; }
+    .story-card .en { font-size: 0.85rem; color: #666; margin-top: 2px; }
+    .badge { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 4px; background: #e5e5e5; font-size: 0.75rem; font-weight: 500; }
+    .library-filter { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .library-filter label { font-size: 0.9rem; color: #555; }
+    .library-filter select { padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e5e5; font-size: 0.95rem; min-width: 120px; }
+    .reader-header { margin-bottom: 24px; }
+    .reader-header h1 { font-size: 1.5rem; margin: 0; }
+    .reader-header .back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; color: #666; text-decoration: none; font-size: 0.9rem; }
+    .reader-header .back:hover { color: #1a1a1a; }
+    .selected-sentence-box { position: sticky; top: 0; z-index: 5; margin-bottom: 20px; padding: 14px 16px; border-radius: 10px; background: #f0f4ff; border: 1px solid rgba(37, 99, 235, 0.2); min-height: 3em; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .selected-sentence-box .translation-top { font-size: 1rem; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
+    .selected-sentence-box .pinyin-top { font-size: 0.9rem; color: #555; }
+    .selected-sentence-box.empty { color: #888; font-size: 0.9rem; font-weight: normal; }
+    .sentence { margin-bottom: 28px; padding: 12px; border-radius: 8px; transition: background 0.2s; cursor: pointer; }
+    .sentence:hover { background: rgba(0,0,0,0.03); }
+    .sentence.highlight { background: rgba(37, 99, 235, 0.08); outline: 1px solid rgba(37, 99, 235, 0.2); }
+    .sentence.selected { background: rgba(37, 99, 235, 0.12); outline: 1px solid rgba(37, 99, 235, 0.3); }
+    .sentence .chars { font-size: 1.5rem; line-height: 1.6; }
+    .sentence .chars span.char { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+    .sentence .chars span.char:hover { background: rgba(37, 99, 235, 0.15); }
+    .audio-bar { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; }
+    .audio-bar .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .audio-bar button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #e5e5e5; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .audio-bar button:hover { background: #f0f0f0; }
+    .audio-bar .time { font-size: 0.85rem; color: #666; }
+    .audio-bar input[type="range"] { width: 100%; height: 8px; accent-color: #2563eb; }
+    .audio-bar .speed-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .audio-bar .speed-row label { font-size: 0.85rem; color: #666; }
+    .audio-bar .speed-row select { padding: 4px 8px; border-radius: 6px; border: 1px solid #e5e5e5; font-size: 0.9rem; }
+    .popup { position: fixed; z-index: 100; width: 260px; max-width: calc(100vw - 32px); max-height: 85vh; overflow-y: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px; border-radius: 10px; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid #e5e5e5; }
+    .popup .word { font-size: 1.25rem; font-weight: 600; }
+    .popup .pinyin { font-size: 0.9rem; color: #666; margin-left: 8px; }
+    .popup .meaning { margin-top: 6px; font-size: 0.9rem; }
+    .popup .hsk { margin-top: 8px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: #eee; font-size: 0.75rem; }
+    .popup .actions { margin-top: 10px; display: flex; gap: 6px; }
+    .popup button { padding: 6px 10px; border: none; border-radius: 6px; background: #f0f0f0; cursor: pointer; }
+    .popup button:hover { background: #e0e0e0; }
+    .popup .saved-msg { font-size: 0.85rem; color: #16a34a; margin-top: 6px; }
+    .page-title { font-size: 1.25rem; margin-bottom: 8px; }
+    .muted { color: #666; }
+    .csv-download { display: inline-block; margin-top: 16px; padding: 10px 16px; background: #2563eb; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .csv-download:hover { background: #1d4ed8; }
+    .new-story textarea { width: 100%; min-height: 120px; padding: 12px; border: 1px solid #e5e5e5; border-radius: 8px; font-size: 1rem; resize: vertical; }
+    .new-story .btn-row { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .new-story .btn { padding: 10px 18px; border-radius: 8px; border: none; font-weight: 500; cursor: pointer; font-size: 0.95rem; }
+    .new-story .btn-primary { background: #2563eb; color: #fff; }
+    .new-story .btn-primary:hover { background: #1d4ed8; }
+    .new-story .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .new-story .btn-secondary { background: #f0f0f0; color: #1a1a1a; }
+    .new-story .btn-secondary:hover { background: #e5e5e5; }
+    .new-story .status { margin-top: 12px; font-size: 0.9rem; color: #666; }
+    .new-story .status.error { color: #b91c1c; }
+    .new-story .status.success { color: #16a34a; }
+    .settings-row { margin-top: 14px; }
+    .settings-row label { display: block; font-size: 0.9rem; margin-bottom: 4px; color: #555; }
+    .settings-row input { width: 100%; max-width: 400px; padding: 8px 10px; border: 1px solid #e5e5e5; border-radius: 6px; }
+    .settings-row select { padding: 8px 10px; border: 1px solid #e5e5e5; border-radius: 6px; font-size: 1rem; min-width: 200px; }
+    .voice-list { list-style: none; padding: 0; margin: 0.5rem 0 0 0; max-height: 240px; overflow-y: auto; }
+    .voice-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .voice-list li:last-child { border-bottom: none; }
+    .voice-list input[type="radio"] { margin: 0; }
+    .voice-list .voice-name { flex: 1; font-size: 0.9rem; min-width: 0; }
+    .voice-sample-btn { padding: 4px 10px; font-size: 0.8rem; background: #e5e5e5; border: none; border-radius: 6px; cursor: pointer; }
+    .voice-sample-btn:hover { background: #d0d0d0; }
+    .help-section .link { color: #2563eb; text-decoration: none; }
+    .help-section .link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <a href="#" class="nav-link active" data-screen="library">📚 <span data-i18n="nav_library">Bibliothek</span></a>
+      <a href="#" class="nav-link" data-screen="favorites">❤️ <span data-i18n="nav_favorites">Favoriten</span></a>
+      <a href="#" class="nav-link" data-screen="saved">💾 <span data-i18n="nav_saved">Gespeicherte Wörter</span></a>
+      <a href="#" class="nav-link" data-screen="new-story">✨ <span data-i18n="nav_new_story">Neue Geschichte</span></a>
+      <a href="#" class="nav-link" data-screen="settings">⚙️ <span data-i18n="nav_settings">Einstellungen</span></a>
+    </aside>
+    <div class="main">
+      <header class="header">
+        <button type="button" id="toggle-sidebar" title="Sidebar ein/aus">📋</button>
+        <span class="muted" style="font-size: 0.85rem;" data-i18n="sidebar_toggle">Sidebar ein-/ausblenden</span>
+      </header>
+      <div class="content">
+        <div id="screen-library" class="screen active"></div>
+        <div id="screen-favorites" class="screen">
+          <h1 class="page-title" data-i18n="favorites_title">Favoriten</h1>
+          <p class="muted" data-i18n="favorites_desc">Gespeicherte Geschichten erscheinen hier.</p>
+        </div>
+        <div id="screen-saved" class="screen">
+          <h1 class="page-title" data-i18n="saved_title">Gespeicherte Wörter</h1>
+          <p class="muted" data-i18n="saved_desc">Hier siehst du gespeicherte Wörter und kannst sie als CSV herunterladen.</p>
+          <div id="saved-words-list"></div>
+          <button type="button" class="csv-download" id="csv-download-btn" data-i18n="csv_download">CSV herunterladen</button>
+        </div>
+        <div id="screen-new-story" class="screen">
+          <h1 class="page-title" data-i18n="new_story_title">Neue Geschichte (KI)</h1>
+          <p class="muted" data-i18n="new_story_desc">Beschreibe auf Englisch das Thema oder die Idee. Dann „Generieren“ – die Geschichte wird auf Chinesisch erstellt und der Bibliothek hinzugefügt.</p>
+          <div class="new-story">
+            <label for="new-story-input" data-i18n="new_story_label">Beschreibung auf Englisch</label>
+            <textarea id="new-story-input" data-i18n-placeholder="new_story_placeholder"></textarea>
+            <div class="settings-row" style="margin-top: 12px;">
+              <label for="new-story-sentences" data-i18n="new_story_sentences">Anzahl Sätze</label>
+              <input type="number" id="new-story-sentences" min="3" max="30" value="8" style="width: 80px;">
+            </div>
+            <div class="settings-row">
+              <label for="new-story-hsk" data-i18n="new_story_hsk">HSK-Stufe</label>
+              <select id="new-story-hsk">
+                <option value="1">HSK 1</option>
+                <option value="2">HSK 2</option>
+                <option value="3">HSK 3</option>
+                <option value="4">HSK 4</option>
+                <option value="5">HSK 5</option>
+                <option value="6">HSK 6</option>
+              </select>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="btn-generate" data-i18n="generate">Generieren</button>
+              <button type="button" class="btn btn-secondary" id="btn-new-clear" data-i18n="new_btn">Neu</button>
+            </div>
+            <div id="new-story-status" class="status"></div>
+          </div>
+        </div>
+        <div id="screen-settings" class="screen">
+          <h1 class="page-title" data-i18n="settings_title">Einstellungen</h1>
+          <section class="help-section" style="margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border, #e5e5e5);">
+            <h2 style="font-size: 1.1rem; margin: 0 0 8px 0;" data-i18n="help_title">Hilfe</h2>
+            <p class="muted" style="margin: 0 0 12px 0; font-size: 0.9rem;" data-i18n="help_intro">So nutzt du die App (auch für andere Nutzer, die die Seite im Internet öffnen):</p>
+            <ul class="help-list" style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; line-height: 1.6; color: var(--muted, #666);">
+              <li data-i18n="help_library"><strong>Bibliothek</strong> – Auf der Startseite (Library) eine Geschichte auswählen und anklicken.</li>
+              <li data-i18n="help_reader"><strong>Leser</strong> – Auf einen Satz klicken: Übersetzung und Pinyin erscheinen. Auf ein Zeichen klicken: Bedeutung, Pinyin und Lautsprecher im Popup.</li>
+              <li data-i18n="help_audio"><strong>Audio</strong> – Play-/Pause-Button und Geschwindigkeit unten. Stimme hier unter „Stimme für Vorlesen“ wählen.</li>
+              <li data-i18n="help_data">Alles läuft im Browser. Es werden keine Daten an einen Server geschickt.</li>
+            </ul>
+            <p style="margin: 14px 0 6px 0; font-size: 0.9rem; font-weight: 600;" data-i18n="help_links_title">API-Schlüssel bekommen:</p>
+            <ul class="help-list" style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; line-height: 1.7; color: var(--muted, #666);">
+              <li><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="link">Google Gemini</a> <span data-i18n="help_link_gemini">– kostenloser API-Key für „Neue Geschichte“</span></li>
+              <li><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" class="link">OpenAI (ChatGPT)</a> <span data-i18n="help_link_openai">– API-Key, wenn du OpenAI als Anbieter nutzt</span></li>
+            </ul>
+          </section>
+          <p class="muted" data-i18n="settings_desc">Für „Neue Geschichte“: Anbieter wählen und passenden API-Schlüssel eintragen. Schlüssel werden nur lokal gespeichert.</p>
+          <div class="settings-row">
+            <label for="setting-ui-lang" data-i18n="app_lang">Sprache der Anwendung</label>
+            <select id="setting-ui-lang">
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <label for="setting-ai-provider" data-i18n="settings_provider">KI-Anbieter</label>
+            <select id="setting-ai-provider">
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div class="settings-row" id="settings-row-gemini">
+            <label for="setting-gemini-key" data-i18n="settings_gemini_key">Gemini API-Schlüssel</label>
+            <input type="password" id="setting-gemini-key" placeholder="AIza...">
+          </div>
+          <div class="settings-row" id="settings-row-openai">
+            <label for="setting-openai-key" data-i18n="settings_openai_key">OpenAI API-Schlüssel</label>
+            <input type="password" id="setting-openai-key" placeholder="sk-...">
+          </div>
+          <div class="settings-row" style="margin-top: 24px;">
+            <label data-i18n="settings_voice">Stimme für Vorlesen (Audio)</label>
+            <p class="muted" style="font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings_voice_desc">Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.</p>
+            <ul id="settings-voice-list" class="voice-list"></ul>
+          </div>
+        </div>
+        <div id="screen-reader" class="screen"></div>
+      </div>
+    </div>
+  </div>
+  <div id="popup" class="popup" style="display: none;"></div>
+
+  <script src="hsk-dict.js"></script>
+  <script>
+    var INITIAL_STORIES = [
+      {
+        id: "story-1",
+        title: "今天天气很好",
+        titlePinyin: "Jīntiān tiānqì hěn hǎo",
+        titleTranslation: "The weather is very nice today",
+        titleTranslation_de: "Das Wetter ist heute sehr schön",
+        titleTranslation_es: "Hoy hace muy buen tiempo",
+        difficulty: 1,
+        sentences: [
+          { start: 0, end: 2.5, text: "你好！我是小明。", pinyin: "Nǐ hǎo! Wǒ shì Xiǎo Míng.", translation: "Hello! I am Xiaoming.", translation_de: "Hallo! Ich bin Xiaoming.", translation_es: "¡Hola! Soy Xiaoming." },
+          { start: 2.5, end: 5.5, text: "今天天气很好。", pinyin: "Jīntiān tiānqì hěn hǎo.", translation: "The weather is very nice today.", translation_de: "Das Wetter ist heute sehr schön.", translation_es: "Hoy hace muy buen tiempo." },
+          { start: 5.5, end: 8.5, text: "太阳很大。", pinyin: "Tàiyáng hěn dà.", translation: "The sun is very bright.", translation_de: "Die Sonne ist sehr groß.", translation_es: "El sol es muy grande." },
+          { start: 8.5, end: 11.5, text: "我去公园。", pinyin: "Wǒ qù gōngyuán.", translation: "I go to the park.", translation_de: "Ich gehe in den Park.", translation_es: "Voy al parque." },
+          { start: 11.5, end: 15.5, text: "公园里有很多人。", pinyin: "Gōngyuán lǐ yǒu hěn duō rén.", translation: "There are many people in the park.", translation_de: "Im Park sind viele Leute.", translation_es: "Hay mucha gente en el parque." },
+          { start: 15.5, end: 20, text: "我喜欢在公园里走路。", pinyin: "Wǒ xǐhuan zài gōngyuán lǐ zǒulù.", translation: "I like walking in the park.", translation_de: "Ich gehe gern im Park spazieren.", translation_es: "Me gusta pasear por el parque." },
+          { start: 20, end: 24, text: "我也喜欢学习中文。", pinyin: "Wǒ yě xǐhuan xuéxí Zhōngwén.", translation: "I also like to study Chinese.", translation_de: "Ich lerne auch gern Chinesisch.", translation_es: "También me gusta estudiar chino." },
+          { start: 24, end: 26, text: "再见！", pinyin: "Zàijiàn!", translation: "Goodbye!", translation_de: "Tschüss!", translation_es: "¡Hasta luego!" }
+        ]
+      },
+      {
+        id: "story-2",
+        title: "我的家人",
+        titlePinyin: "Wǒ de jiārén",
+        titleTranslation: "My family",
+        titleTranslation_de: "Meine Familie",
+        titleTranslation_es: "Mi familia",
+        difficulty: 1,
+        sentences: [
+          { start: 0, end: 3, text: "这是我的爸爸。", pinyin: "Zhè shì wǒ de bàba.", translation: "This is my father.", translation_de: "Das ist mein Vater.", translation_es: "Este es mi padre." },
+          { start: 3, end: 6, text: "这是我的妈妈。", pinyin: "Zhè shì wǒ de māma.", translation: "This is my mother.", translation_de: "Das ist meine Mutter.", translation_es: "Esta es mi madre." },
+          { start: 6, end: 10, text: "我爸爸是老师。", pinyin: "Wǒ bàba shì lǎoshī.", translation: "My father is a teacher.", translation_de: "Mein Vater ist Lehrer.", translation_es: "Mi padre es profesor." },
+          { start: 10, end: 14, text: "我妈妈是医生。", pinyin: "Wǒ māma shì yīshēng.", translation: "My mother is a doctor.", translation_de: "Meine Mutter ist Ärztin.", translation_es: "Mi madre es médico." },
+          { start: 14, end: 18, text: "我有一个哥哥。", pinyin: "Wǒ yǒu yī ge gēge.", translation: "I have an older brother.", translation_de: "Ich habe einen älteren Bruder.", translation_es: "Tengo un hermano mayor." },
+          { start: 18, end: 22, text: "我有很多朋友。", pinyin: "Wǒ yǒu hěn duō péngyou.", translation: "I have many friends.", translation_de: "Ich habe viele Freunde.", translation_es: "Tengo muchos amigos." },
+          { start: 22, end: 27, text: "我们一家人很幸福。", pinyin: "Wǒmen yī jiā rén hěn xìngfú.", translation: "Our family is very happy.", translation_de: "Unsere Familie ist sehr glücklich.", translation_es: "Nuestra familia es muy feliz." }
+        ]
+      },
+      {
+        id: "story-3",
+        title: "我的爱好",
+        titlePinyin: "Wǒ de àihào",
+        titleTranslation: "My hobbies",
+        titleTranslation_de: "Meine Hobbys",
+        titleTranslation_es: "Mis aficiones",
+        difficulty: 1,
+        sentences: [
+          { start: 0, end: 3, text: "我叫李华。", pinyin: "Wǒ jiào Lǐ Huá.", translation: "My name is Li Hua.", translation_de: "Ich heiße Li Hua.", translation_es: "Me llamo Li Hua." },
+          { start: 3, end: 7, text: "我每天都很忙。", pinyin: "Wǒ měi tiān dōu hěn máng.", translation: "I am very busy every day.", translation_de: "Ich bin jeden Tag sehr beschäftigt.", translation_es: "Estoy muy ocupado cada día." },
+          { start: 7, end: 11, text: "早上我喝咖啡。", pinyin: "Zǎoshang wǒ hē kāfēi.", translation: "In the morning I drink coffee.", translation_de: "Morgens trinke ich Kaffee.", translation_es: "Por la mañana tomo café." },
+          { start: 11, end: 15, text: "然后我去工作。", pinyin: "Ránhòu wǒ qù gōngzuò.", translation: "Then I go to work.", translation_de: "Dann gehe ich zur Arbeit.", translation_es: "Luego voy a trabajar." },
+          { start: 15, end: 19, text: "晚上我喜欢看书。", pinyin: "Wǎnshang wǒ xǐhuan kàn shū.", translation: "In the evening I like to read books.", translation_de: "Abends lese ich gern.", translation_es: "Por la noche me gusta leer." },
+          { start: 19, end: 23, text: "周末我和朋友吃饭。", pinyin: "Zhōumò wǒ hé péngyou chī fàn.", translation: "On weekends I eat with friends.", translation_de: "Am Wochenende esse ich mit Freunden.", translation_es: "Los fines de semana como con amigos." },
+          { start: 23, end: 26, text: "生活很美好！", pinyin: "Shēnghuó hěn měihǎo!", translation: "Life is wonderful!", translation_de: "Das Leben ist wunderbar!", translation_es: "¡La vida es maravillosa!" }
+        ]
+      }
+    ];
+    var GENERATED_STORIES_KEY = "kanmandarin_generated_stories";
+    function getGeneratedStories() {
+      try {
+        var raw = localStorage.getItem(GENERATED_STORIES_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) { return []; }
+    }
+    function saveGeneratedStories(list) {
+      try {
+        localStorage.setItem(GENERATED_STORIES_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+    var STORIES = INITIAL_STORIES.concat(getGeneratedStories());
+
+    var UI_LANG_KEY = "kanmandarin_ui_lang";
+    function getUILang() {
+      try { var l = localStorage.getItem(UI_LANG_KEY); if (l === "en" || l === "es" || l === "de") return l; } catch (e) {}
+      return "de";
+    }
+    function setUILang(lang) {
+      try { localStorage.setItem(UI_LANG_KEY, lang === "en" || lang === "es" ? lang : "de"); } catch (e) {}
+    }
+    var UI_STRINGS = {
+      de: {
+        nav_library: "Bibliothek", nav_favorites: "Favoriten", nav_saved: "Gespeicherte Wörter", nav_new_story: "Neue Geschichte", nav_settings: "Einstellungen",
+        sidebar_toggle: "Sidebar ein-/ausblenden",
+        favorites_title: "Favoriten", favorites_desc: "Gespeicherte Geschichten erscheinen hier.",
+        saved_title: "Gespeicherte Wörter", saved_desc: "Hier siehst du gespeicherte Wörter und kannst sie als CSV herunterladen.", csv_download: "CSV herunterladen",
+        saved_empty: "Noch keine Wörter gespeichert. Klicke in einer Geschichte auf ein Zeichen und wähle „Speichern“.", saved_count_remove: "Versehentlich gespeichert? Klicke auf „Aus Liste entfernen“.", saved_remove_btn: "Aus Liste entfernen",
+        new_story_title: "Neue Geschichte (KI)", new_story_desc: "Beschreibe auf Englisch das Thema oder die Idee. Dann „Generieren“ – die Geschichte wird auf Chinesisch erstellt und der Bibliothek hinzugefügt.",
+        new_story_label: "Beschreibung auf Englisch", new_story_placeholder: "z. B. Eine kurze Geschichte über eine Katze auf dem Markt. Einfacher Wortschatz.",
+        new_story_sentences: "Anzahl Sätze", new_story_hsk: "HSK-Stufe", generate: "Generieren", new_btn: "Neu",
+        settings_title: "Einstellungen", settings_desc: "Für „Neue Geschichte“: Anbieter wählen und passenden API-Schlüssel eintragen. Schlüssel werden nur lokal gespeichert.",
+        settings_provider: "KI-Anbieter", settings_gemini_key: "Gemini API-Schlüssel", settings_openai_key: "OpenAI API-Schlüssel",
+        settings_voice: "Stimme für Vorlesen (Audio)", settings_voice_desc: "Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.",
+        help_title: "Hilfe", help_intro: "So nutzt du die App (auch für andere Nutzer, die die Seite im Internet öffnen):",
+        help_library: "Bibliothek – Auf der Startseite (Library) eine Geschichte auswählen und anklicken.",
+        help_reader: "Leser – Auf einen Satz klicken: Übersetzung und Pinyin erscheinen. Auf ein Zeichen klicken: Bedeutung, Pinyin und Lautsprecher im Popup.",
+        help_audio: "Audio – Play-/Pause-Button und Geschwindigkeit unten. Stimme hier unter „Stimme für Vorlesen“ wählen.",
+        help_data: "Alles läuft im Browser. Es werden keine Daten an einen Server geschickt.",
+        help_links_title: "API-Schlüssel bekommen:",
+        help_link_gemini: "– kostenloser API-Key für „Neue Geschichte“",
+        help_link_openai: "– API-Key, wenn du OpenAI als Anbieter nutzt",
+        voice_sample: "Hörprobe", voice_no_found: "Keine chinesischen Stimmen gefunden. System-Sprachoptionen prüfen.",
+        library_title: "Bibliothek", library_filter: "HSK-Stufe:", library_all: "Alle", library_only_hsk: "Nur HSK ", library_choose: "Wähle eine Geschichte. Klicke auf Zeichen für Übersetzung.",
+        library_stories: "Geschichten", library_story: "Geschichte", library_empty: "Keine Geschichten für diese HSK-Stufe. Wähle „Alle“ oder generiere eine neue Geschichte.",
+        reader_back: "Zurück zur Bibliothek", reader_click_sentence: "Klicke auf einen Satz für Übersetzung und Pinyin.", speed_label: "Geschwindigkeit:",
+        popup_save: "Speichern", popup_play: "Abspielen", popup_close: "Schließen", popup_saved: "Bereits gespeichert", popup_saved_ok: "Gespeichert!",
+        in_sentence: "Im Satz:", not_found: "Nicht gefunden.",
+        status_enter_desc: "Bitte zuerst eine Beschreibung auf Englisch eingeben.", status_api_key: "Bitte in Einstellungen einen ", status_api_key_suffix: " API-Schlüssel eintragen.",
+        status_generating: "Generiere Geschichte …", status_created: "Geschichte wurde erstellt und zur Bibliothek hinzugefügt.", status_error: "Fehler bei der Generierung.",
+        app_lang: "Sprache der Anwendung", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
+        audio_need_server: "Audio funktioniert nur, wenn die App über einen Webserver geöffnet wird. Bitte starten Sie start-server.bat und rufen Sie im Browser http://localhost:8080 auf (nicht als Datei/file:// öffnen)."
+      },
+      en: {
+        nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
+        sidebar_toggle: "Toggle sidebar",
+        favorites_title: "Favorites", favorites_desc: "Saved stories will appear here.",
+        saved_title: "Saved Words", saved_desc: "Here you can see saved words and download them as CSV.", csv_download: "Download CSV",
+        saved_empty: "No words saved yet. Click a character in a story and choose „Save“.", saved_count_remove: "Saved by mistake? Click „Remove from list“.", saved_remove_btn: "Remove from list",
+        new_story_title: "New Story (AI)", new_story_desc: "Describe the topic or idea in English. Then „Generate“ – the story will be created in Chinese and added to the library.",
+        new_story_label: "Description in English", new_story_placeholder: "e.g. A short story about a cat that visits the market. Use simple vocabulary.",
+        new_story_sentences: "Number of sentences", new_story_hsk: "HSK level", generate: "Generate", new_btn: "New",
+        settings_title: "Settings", settings_desc: "For „New Story“: choose provider and enter API key. Keys are stored locally only.",
+        settings_provider: "AI provider", settings_gemini_key: "Gemini API key", settings_openai_key: "OpenAI API key",
+        settings_voice: "Voice for reading (audio)", settings_voice_desc: "Chinese voices on your system. Click „Sample“ for a short preview.",
+        help_title: "Help", help_intro: "How to use the app (for you and others who open the site on the internet):",
+        help_library: "Library – On the start page (Library), choose a story and click it.",
+        help_reader: "Reader – Click a sentence to see translation and pinyin. Click a character for meaning, pinyin and speaker in the popup.",
+        help_audio: "Audio – Play/pause and speed at the bottom. Choose voice under „Voice for reading“ below.",
+        help_data: "Everything runs in the browser. No data is sent to any server.",
+        help_links_title: "Get API keys:",
+        help_link_gemini: "– free API key for „New Story“",
+        help_link_openai: "– API key when using OpenAI as provider",
+        voice_sample: "Sample", voice_no_found: "No Chinese voices found. Check system language options.",
+        library_title: "Library", library_filter: "HSK level:", library_all: "All", library_only_hsk: "Only HSK ", library_choose: "Choose a story. Click characters for translation.",
+        library_stories: "stories", library_story: "story", library_empty: "No stories for this HSK level. Choose „All“ or generate a new story.",
+        reader_back: "Back to Library", reader_click_sentence: "Click a sentence for translation and pinyin.", speed_label: "Speed:",
+        popup_save: "Save", popup_play: "Play", popup_close: "Close", popup_saved: "Already saved", popup_saved_ok: "Saved!",
+        in_sentence: "In sentence:", not_found: "Not found.",
+        status_enter_desc: "Please enter a description in English first.", status_api_key: "Please enter a ", status_api_key_suffix: " API key in Settings.",
+        status_generating: "Generating story …", status_created: "Story was created and added to the library.", status_error: "Error generating story.",
+        app_lang: "App language", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
+        audio_need_server: "Audio only works when the app is opened via a web server. Please run start-server.bat and open http://localhost:8080 in your browser (do not open as file://)."
+      },
+      es: {
+        nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
+        sidebar_toggle: "Mostrar/ocultar barra lateral",
+        favorites_title: "Favoritos", favorites_desc: "Las historias guardadas aparecerán aquí.",
+        saved_title: "Palabras guardadas", saved_desc: "Aquí puedes ver las palabras guardadas y descargarlas en CSV.", csv_download: "Descargar CSV",
+        saved_empty: "Aún no hay palabras guardadas. Haz clic en un carácter en una historia y elige „Guardar“.", saved_count_remove: "¿Guardado por error? Haz clic en „Quitar de la lista“.", saved_remove_btn: "Quitar de la lista",
+        new_story_title: "Nueva historia (IA)", new_story_desc: "Describe el tema o la idea en inglés. Luego „Generar“ – la historia se creará en chino y se añadirá a la biblioteca.",
+        new_story_label: "Descripción en inglés", new_story_placeholder: "ej. Una historia corta sobre un gato en el mercado. Vocabulario sencillo.",
+        new_story_sentences: "Número de oraciones", new_story_hsk: "Nivel HSK", generate: "Generar", new_btn: "Nueva",
+        settings_title: "Ajustes", settings_desc: "Para „Nueva historia“: elige el proveedor e introduce la clave API. Las claves se guardan solo localmente.",
+        settings_provider: "Proveedor de IA", settings_gemini_key: "Clave API Gemini", settings_openai_key: "Clave API OpenAI",
+        settings_voice: "Voz para leer (audio)", settings_voice_desc: "Voces chinas de tu sistema. Haz clic en „Muestra“ para una vista previa.",
+        help_title: "Ayuda", help_intro: "Cómo usar la app (para ti y para otros que abran la página en internet):",
+        help_library: "Biblioteca – En la página de inicio (Library), elige una historia y haz clic.",
+        help_reader: "Lector – Haz clic en una oración para ver traducción y pinyin. Haz clic en un carácter para significado, pinyin y altavoz en el popup.",
+        help_audio: "Audio – Reproducir/pausa y velocidad abajo. Elige voz en „Voz para leer“ más abajo.",
+        help_data: "Todo funciona en el navegador. No se envían datos a ningún servidor.",
+        help_links_title: "Obtener claves API:",
+        help_link_gemini: "– clave API gratuita para „Nueva historia“",
+        help_link_openai: "– clave API si usas OpenAI como proveedor",
+        voice_sample: "Muestra", voice_no_found: "No se encontraron voces chinas. Revisa las opciones de idioma del sistema.",
+        library_title: "Biblioteca", library_filter: "Nivel HSK:", library_all: "Todas", library_only_hsk: "Solo HSK ", library_choose: "Elige una historia. Haz clic en los caracteres para la traducción.",
+        library_stories: "historias", library_story: "historia", library_empty: "No hay historias para este nivel HSK. Elige „Todas“ o genera una nueva.",
+        reader_back: "Volver a la biblioteca", reader_click_sentence: "Haz clic en una oración para ver traducción y pinyin.", speed_label: "Velocidad:",
+        popup_save: "Guardar", popup_play: "Reproducir", popup_close: "Cerrar", popup_saved: "Ya guardado", popup_saved_ok: "¡Guardado!",
+        in_sentence: "En la oración:", not_found: "No encontrado.",
+        status_enter_desc: "Introduce primero una descripción en inglés.", status_api_key: "Introduce una clave API de ", status_api_key_suffix: " en Ajustes.",
+        status_generating: "Generando historia …", status_created: "La historia se creó y se añadió a la biblioteca.", status_error: "Error al generar la historia.",
+        app_lang: "Idioma de la aplicación", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
+        audio_need_server: "El audio solo funciona cuando la app se abre mediante un servidor web. Ejecuta start-server.bat y abre http://localhost:8080 en el navegador (no como file://)."
+      }
+    };
+    function t(key) {
+      var lang = getUILang();
+      var s = UI_STRINGS[lang] && UI_STRINGS[lang][key];
+      return s != null ? s : (UI_STRINGS.de[key] || key);
+    }
+    function applyI18n() {
+      document.querySelectorAll("[data-i18n]").forEach(function(el) {
+        var k = el.getAttribute("data-i18n");
+        if (k) el.textContent = t(k);
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach(function(el) {
+        var k = el.getAttribute("data-i18n-placeholder");
+        if (k) el.placeholder = t(k);
+      });
+    }
+    function getTargetLang() {
+      return getUILang();
+    }
+    function getStoryTitleTranslation(story) {
+      if (!story) return "";
+      var lang = getTargetLang();
+      var key = "titleTranslation_" + lang;
+      return (story[key] != null && story[key] !== "") ? story[key] : (story.titleTranslation || "");
+    }
+    function getSentenceTranslation(seg) {
+      if (!seg) return "";
+      var lang = getTargetLang();
+      var key = "translation_" + lang;
+      return (seg[key] != null && seg[key] !== "") ? seg[key] : (seg.translation || "");
+    }
+
+    var DICT = (typeof HSK_DICT !== "undefined" ? HSK_DICT : { "你": { word: "你", pinyin: "nǐ", meaning: "you", hsk: 1 }, "好": { word: "好", pinyin: "hǎo", meaning: "good; well", hsk: 1 } });
+
+    var GENERATED_VOCAB_KEY = "kanmandarin_generated_vocabulary";
+    function getGeneratedVocabulary() {
+      try {
+        var raw = localStorage.getItem(GENERATED_VOCAB_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    }
+    function setGeneratedVocabulary(obj) {
+      try { localStorage.setItem(GENERATED_VOCAB_KEY, JSON.stringify(obj)); } catch (e) {}
+    }
+    function mergeGeneratedVocabulary(entries) {
+      if (!entries || !Array.isArray(entries)) return;
+      var vocab = getGeneratedVocabulary();
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var w = e && e.word;
+        if (!w) continue;
+        vocab[w] = { word: w, pinyin: e.pinyin || "?", meaning: e.meaning || "", hsk: (typeof e.hsk === "number" ? e.hsk : null) };
+      }
+      setGeneratedVocabulary(vocab);
+    }
+    function inDict(word) {
+      if (!word) return false;
+      if (DICT[word]) return true;
+      if (getGeneratedVocabulary()[word]) return true;
+      return false;
+    }
+    function findLongestWord(text, startIndex) {
+      var maxLen = Math.min(6, (text && text.length) ? text.length - startIndex : 0);
+      for (var len = maxLen; len >= 1; len--) {
+        var w = text.slice(startIndex, startIndex + len);
+        if (inDict(w)) return w;
+      }
+      return null;
+    }
+    function lookup(word) {
+      if (DICT[word]) return DICT[word];
+      var gen = getGeneratedVocabulary()[word];
+      if (gen) return gen;
+      return { word: word, pinyin: "?", meaning: "Nicht gefunden.", hsk: null };
+    }
+
+    var SAVED_WORDS_KEY = "kanmandarin_saved_words";
+    function getSavedWords() {
+      try {
+        var raw = localStorage.getItem(SAVED_WORDS_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) { return []; }
+    }
+    function setSavedWords(list) {
+      try {
+        localStorage.setItem(SAVED_WORDS_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+    function isWordSaved(character) {
+      var list = getSavedWords();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].character === character) return true;
+      }
+      return false;
+    }
+    function saveWord(entry, exampleSentence, exampleTranslation, contextPinyin) {
+      if (isWordSaved(entry.word)) return;
+      var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "");
+      var english = (entry.meaning && entry.meaning !== "Nicht gefunden.") ? entry.meaning : ("Siehe Beispielsatz: " + (exampleTranslation || ""));
+      var list = getSavedWords();
+      list.push({
+        character: entry.word,
+        pinyin: pinyin,
+        english: english,
+        example_sentence: exampleSentence || "",
+        example_translation: exampleTranslation || ""
+      });
+      setSavedWords(list);
+    }
+    function removeSavedWordAtIndex(index) {
+      var list = getSavedWords();
+      if (index < 0 || index >= list.length) return;
+      list.splice(index, 1);
+      setSavedWords(list);
+      renderSavedScreen();
+    }
+    function csvEscape(str) {
+      if (str == null) return "";
+      var s = String(str);
+      if (s.indexOf(",") >= 0 || s.indexOf('"') >= 0 || s.indexOf("\n") >= 0) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+    function downloadSavedWordsCSV() {
+      var list = getSavedWords();
+      var header = "character,pinyin,english,example_sentence,example_translation";
+      var rows = [header];
+      for (var i = 0; i < list.length; i++) {
+        var r = list[i];
+        rows.push([
+          csvEscape(r.character),
+          csvEscape(r.pinyin),
+          csvEscape(r.english),
+          csvEscape(r.example_sentence),
+          csvEscape(r.example_translation)
+        ].join(","));
+      }
+      var csv = rows.join("\n");
+      var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "kanmandarin_gespeicherte_woerter.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    var OPENAI_KEY_KEY = "kanmandarin_openai_key";
+    var GEMINI_KEY_KEY = "kanmandarin_gemini_key";
+    var AI_PROVIDER_KEY = "kanmandarin_ai_provider";
+    var VOICE_KEY = "kanmandarin_voice";
+    var SAMPLE_TEXT = "你好，今天天气很好。";
+    function getChineseVoices() {
+      var all = [];
+      try { all = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; } catch (e) {}
+      var out = [];
+      for (var i = 0; i < all.length; i++) {
+        var v = all[i];
+        var lang = (v.lang || "").toLowerCase();
+        var name = (v.name || "").toLowerCase();
+        if (lang.indexOf("zh") >= 0 || name.indexOf("chinese") >= 0) out.push(v);
+      }
+      if (out.length === 0) return all;
+      return out;
+    }
+    function getSelectedVoiceName() {
+      try { return localStorage.getItem(VOICE_KEY) || ""; } catch (e) { return ""; }
+    }
+    function setSelectedVoiceName(name) {
+      try { localStorage.setItem(VOICE_KEY, name || ""); } catch (e) {}
+    }
+    function getSelectedVoice() {
+      var name = getSelectedVoiceName();
+      if (!name) return null;
+      var voices = getChineseVoices();
+      for (var i = 0; i < voices.length; i++) {
+        if (voices[i].name === name) return voices[i];
+      }
+      voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      for (var j = 0; j < voices.length; j++) {
+        if (voices[j].name === name) return voices[j];
+      }
+      return null;
+    }
+    function playVoiceSample(voiceName) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(SAMPLE_TEXT);
+      u.lang = "zh-CN";
+      var voices = getChineseVoices().length ? getChineseVoices() : window.speechSynthesis.getVoices();
+      for (var i = 0; i < voices.length; i++) {
+        if (voices[i].name === voiceName) { u.voice = voices[i]; break; }
+      }
+      window.speechSynthesis.speak(u);
+    }
+    function getOpenAIKey() {
+      try { return localStorage.getItem(OPENAI_KEY_KEY) || ""; } catch (e) { return ""; }
+    }
+    function setOpenAIKey(key) {
+      try { localStorage.setItem(OPENAI_KEY_KEY, key || ""); } catch (e) {}
+    }
+    function getGeminiKey() {
+      try { return localStorage.getItem(GEMINI_KEY_KEY) || ""; } catch (e) { return ""; }
+    }
+    function setGeminiKey(key) {
+      try { localStorage.setItem(GEMINI_KEY_KEY, key || ""); } catch (e) {}
+    }
+    function getAIProvider() {
+      try { return localStorage.getItem(AI_PROVIDER_KEY) || "gemini"; } catch (e) { return "gemini"; }
+    }
+    function setAIProvider(p) {
+      try { localStorage.setItem(AI_PROVIDER_KEY, p === "openai" ? "openai" : "gemini"); } catch (e) {}
+    }
+    function renderSettings() {
+      var langSelect = document.getElementById("setting-ui-lang");
+      if (langSelect) {
+        langSelect.value = getUILang();
+        langSelect.onchange = function() {
+          setUILang(langSelect.value);
+          location.reload();
+        };
+      }
+      var providerSelect = document.getElementById("setting-ai-provider");
+      var openaiInput = document.getElementById("setting-openai-key");
+      var geminiInput = document.getElementById("setting-gemini-key");
+      var rowOpenai = document.getElementById("settings-row-openai");
+      var rowGemini = document.getElementById("settings-row-gemini");
+      var provider = getAIProvider();
+      if (providerSelect) {
+        providerSelect.value = provider;
+        providerSelect.onchange = function() {
+          setAIProvider(providerSelect.value);
+          if (rowOpenai) rowOpenai.style.display = providerSelect.value === "openai" ? "block" : "none";
+          if (rowGemini) rowGemini.style.display = providerSelect.value === "gemini" ? "block" : "none";
+        };
+      }
+      if (rowOpenai) rowOpenai.style.display = provider === "openai" ? "block" : "none";
+      if (rowGemini) rowGemini.style.display = provider === "gemini" ? "block" : "none";
+      if (openaiInput) {
+        openaiInput.value = getOpenAIKey();
+        openaiInput.onchange = openaiInput.onblur = function() { setOpenAIKey(openaiInput.value); };
+      }
+      if (geminiInput) {
+        geminiInput.value = getGeminiKey();
+        geminiInput.onchange = geminiInput.onblur = function() { setGeminiKey(geminiInput.value); };
+      }
+      var voiceListEl = document.getElementById("settings-voice-list");
+      if (voiceListEl) {
+        function fillVoiceList() {
+          var voices = getChineseVoices();
+          if (voices.length === 0) {
+            voiceListEl.innerHTML = "<li class=\"muted\" style=\"padding:8px 0\">" + t("voice_no_found") + "</li>";
+            return;
+          }
+          var selected = getSelectedVoiceName();
+          var html = "";
+          for (var i = 0; i < voices.length; i++) {
+            var v = voices[i];
+            var id = "voice-" + i;
+            var checked = v.name === selected ? " checked" : "";
+            html += "<li><input type=\"radio\" name=\"tts-voice\" id=\"" + id + "\" value=\"" + (v.name || "").replace(/"/g, "&quot;") + "\"" + checked + ">" +
+              "<label for=\"" + id + "\" class=\"voice-name\">" + (v.name || "Stimme " + (i + 1)) + "</label>" +
+              "<button type=\"button\" class=\"voice-sample-btn\" data-voice-name=\"" + (v.name || "").replace(/"/g, "&quot;") + "\">" + t("voice_sample") + "</button></li>";
+          }
+          voiceListEl.innerHTML = html;
+          voiceListEl.querySelectorAll("input[name=tts-voice]").forEach(function(radio) {
+            radio.onchange = function() { setSelectedVoiceName(radio.value); };
+          });
+          voiceListEl.querySelectorAll(".voice-sample-btn").forEach(function(btn) {
+            btn.onclick = function() { playVoiceSample(btn.getAttribute("data-voice-name")); };
+          });
+        }
+        fillVoiceList();
+        if (window.speechSynthesis) {
+          window.speechSynthesis.onvoiceschanged = fillVoiceList;
+        }
+      }
+    }
+    function setNewStoryStatus(msg, isError) {
+      var el = document.getElementById("new-story-status");
+      if (!el) return;
+      el.textContent = msg;
+      el.className = "status" + (isError ? " error" : " success");
+      el.style.display = msg ? "block" : "none";
+    }
+    function addTimings(sentences) {
+      if (!sentences || !sentences.length) return;
+      var t = 0;
+      for (var i = 0; i < sentences.length; i++) {
+        var seg = sentences[i];
+        var dur = 2.5 + (seg.text ? Math.min(seg.text.length * 0.4, 8) : 3);
+        seg.start = t;
+        t += dur;
+        seg.end = t;
+      }
+    }
+    function parseAndAddStory(raw, input, btn) {
+      var jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      var obj = JSON.parse(jsonStr);
+      if (!obj.sentences || !Array.isArray(obj.sentences) || obj.sentences.length === 0) throw new Error("Ungültiges Format: keine Sätze.");
+      if (obj.vocabulary && Array.isArray(obj.vocabulary)) mergeGeneratedVocabulary(obj.vocabulary);
+      addTimings(obj.sentences);
+      var newId = "story-" + (Date.now().toString(36));
+      var story = {
+        id: newId,
+        title: obj.title || "Neue Geschichte",
+        titlePinyin: obj.titlePinyin || "",
+        titleTranslation: obj.titleTranslation || "",
+        difficulty: typeof obj.difficulty === "number" ? obj.difficulty : 1,
+        sentences: obj.sentences
+      };
+      STORIES.push(story);
+      var saved = getGeneratedStories();
+      saved.push(story);
+      saveGeneratedStories(saved);
+      setNewStoryStatus(t("status_created"), false);
+      if (input) input.value = "";
+      showScreen("library");
+      setTimeout(function() { openStory(newId); }, 300);
+    }
+    function generateStory() {
+      var input = document.getElementById("new-story-input");
+      var btn = document.getElementById("btn-generate");
+      var text = (input && input.value) ? input.value.trim() : "";
+      if (!text) {
+        setNewStoryStatus(t("status_enter_desc"), true);
+        return;
+      }
+      var provider = getAIProvider();
+      var apiKey = provider === "gemini" ? getGeminiKey() : getOpenAIKey();
+      var keyLabel = provider === "gemini" ? "Gemini" : "OpenAI";
+      if (!apiKey) {
+        setNewStoryStatus(t("status_api_key") + keyLabel + t("status_api_key_suffix"), true);
+        return;
+      }
+      setNewStoryStatus(t("status_generating"), false);
+      if (btn) btn.disabled = true;
+      var sentencesEl = document.getElementById("new-story-sentences");
+      var hskEl = document.getElementById("new-story-hsk");
+      var numSentences = 8;
+      if (sentencesEl) {
+        var n = parseInt(sentencesEl.value, 10);
+        if (!isNaN(n) && n >= 3 && n <= 30) numSentences = n;
+      }
+      var hskLevel = 1;
+      if (hskEl) {
+        var h = parseInt(hskEl.value, 10);
+        if (!isNaN(h) && h >= 1 && h <= 6) hskLevel = h;
+      }
+      var targetLang = getTargetLang();
+      var targetLangName = targetLang === "de" ? "German" : (targetLang === "es" ? "Spanish" : "English");
+      var systemPrompt = "You are a Chinese graded reader author. Given an English topic or story idea, output a story in simplified Chinese for HSK " + hskLevel + " learners. Reply with ONLY a valid JSON object, no markdown, no code fence, no explanation. Use this exact structure: {\"title\":\"...\", \"titlePinyin\":\"...\", \"titleTranslation\":\"...\", \"difficulty\": " + hskLevel + ", \"sentences\":[{\"text\":\"...\", \"pinyin\":\"...\", \"translation\":\"...\"}, ...], \"vocabulary\":[{\"word\":\"...\", \"pinyin\":\"...\", \"meaning\":\"...\", \"hsk\":N}, ...]} . title: Chinese title. titlePinyin: title in pinyin with spaces. titleTranslation: title translation in " + targetLangName + ". difficulty: " + hskLevel + ". sentences: exactly " + numSentences + " items, each with text (Chinese), pinyin (with spaces between syllables), translation in " + targetLangName + ". vocabulary: list of ALL distinct words and characters that appear in the story (each exactly once), each with word (Chinese), pinyin (with tone marks), meaning (short, in " + targetLangName + "), hsk (1-6). Include single characters and multi-character words. Use vocabulary and grammar appropriate for HSK " + hskLevel + ". All translations and vocabulary meanings must be in " + targetLangName + " only.";
+      var userMessage = "Create a story based on this. Use exactly " + numSentences + " sentences. HSK level " + hskLevel + ". Output all translations and vocabulary meanings in " + targetLangName + ". Topic: " + text;
+      var promise;
+      if (provider === "gemini") {
+        promise = fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [ { text: systemPrompt } ] },
+            contents: [ { parts: [ { text: userMessage } ] } ],
+            generationConfig: { temperature: 0.7 }
+          })
+        })
+          .then(function(res) {
+            return res.text().then(function(t) {
+              var data;
+              try { data = t ? JSON.parse(t) : {}; } catch (e) { data = {}; }
+              if (!res.ok) {
+                var err = new Error(data.error && data.error.message ? data.error.message : t || res.status);
+                err.code = data.error && data.error.code ? data.error.code : "";
+                throw err;
+              }
+              var rawText = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) ? (data.candidates[0].content.parts[0].text || "") : "";
+              return { raw: rawText.trim() };
+            });
+          });
+      } else {
+        promise = fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage }
+            ],
+            temperature: 0.7
+          })
+        })
+          .then(function(res) {
+            return res.text().then(function(t) {
+              var data;
+              try { data = t ? JSON.parse(t) : {}; } catch (e) { data = {}; }
+              if (!res.ok) {
+                var err = new Error(data.error && data.error.message ? data.error.message : t || res.status);
+                err.code = data.error && data.error.code ? data.error.code : "";
+                throw err;
+              }
+              var raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : "";
+              return { raw: raw };
+            });
+          });
+      }
+      promise
+        .then(function(result) {
+          parseAndAddStory(result.raw, input, btn);
+        })
+        .catch(function(err) {
+          var msg = err.message || "Fehler bei der Generierung.";
+          if (err.code === "insufficient_quota" || msg.indexOf("quota") >= 0) {
+            msg = "Kontingent überschritten. Bitte Guthaben bzw. Abo bei " + (provider === "gemini" ? "Google AI" : "OpenAI") + " prüfen.";
+          } else if (msg.indexOf("401") >= 0 || msg.indexOf("API key") >= 0 || msg.indexOf("invalid") >= 0) msg = "Ungültiger API-Schlüssel.";
+          else if (msg.indexOf("429") >= 0) msg = "Zu viele Anfragen. Bitte kurz warten.";
+          setNewStoryStatus(msg, true);
+        })
+        .then(function() {
+          if (btn) btn.disabled = false;
+        });
+    }
+    function clearNewStoryForm() {
+      var input = document.getElementById("new-story-input");
+      if (input) input.value = "";
+      setNewStoryStatus("", false);
+    }
+
+    function renderSavedScreen() {
+      var listEl = document.getElementById("saved-words-list");
+      if (!listEl) return;
+      var list = getSavedWords();
+      if (list.length === 0) {
+        listEl.innerHTML = "<p class=\"muted\">" + t("saved_empty") + "</p>";
+      } else {
+        var html = "<p class=\"muted\" style=\"margin-bottom:12px\">" + list.length + " Einträge. " + t("saved_count_remove") + "</p><ul style=\"list-style:none;padding:0\">";
+        for (var i = 0; i < list.length; i++) {
+          var r = list[i];
+          var ce = (r.character || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+          var pe = (r.pinyin || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+          var ee = (r.english || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+          var se = (r.example_sentence || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+          var te = (r.example_translation || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+          var mainLine = ee;
+          if (ee === "Nicht gefunden." && (se || te)) mainLine = t("in_sentence") + " " + te;
+          else if (ee.indexOf("Siehe Beispielsatz") === 0) mainLine = ee;
+          html += "<li style=\"padding:8px 0;border-bottom:1px solid #eee;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px\">" +
+            "<span style=\"flex:1;min-width:0\"><strong>" + ce + "</strong> " + pe + " — " + mainLine + "<br><span class=\"muted\" style=\"font-size:0.85rem\">" + se + (te ? " / " + te : "") + "</span></span>" +
+            "<button type=\"button\" class=\"btn-remove\" data-index=\"" + i + "\" style=\"flex-shrink:0;padding:4px 10px;font-size:0.8rem;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer\">" + t("saved_remove_btn") + "</button></li>";
+        }
+        html += "</ul>";
+        listEl.innerHTML = html;
+        listEl.querySelectorAll(".btn-remove").forEach(function(btn) {
+          btn.onclick = function() { removeSavedWordAtIndex(parseInt(btn.getAttribute("data-index"), 10)); };
+        });
+      }
+      var btn = document.getElementById("csv-download-btn");
+      if (btn) btn.onclick = downloadSavedWordsCSV;
+    }
+
+    function escapeHtml(str) {
+      if (str == null) return "";
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    }
+    var libraryHskFilter = 0;
+    function renderLibrary() {
+      var el = document.getElementById("screen-library");
+      if (!el) return;
+      var filtered = libraryHskFilter === 0 ? STORIES : STORIES.filter(function(s) { return (s.difficulty || 1) === libraryHskFilter; });
+      var html = '<h1 class="page-title">' + t("library_title") + '</h1>' +
+        '<div class="library-filter">' +
+        '<label for="library-hsk-filter">' + t("library_filter") + '</label>' +
+        '<select id="library-hsk-filter">' +
+        '<option value="0"' + (libraryHskFilter === 0 ? ' selected' : '') + '>' + t("library_all") + '</option>' +
+        '<option value="1"' + (libraryHskFilter === 1 ? ' selected' : '') + '>' + t("library_only_hsk") + '1</option>' +
+        '<option value="2"' + (libraryHskFilter === 2 ? ' selected' : '') + '>' + t("library_only_hsk") + '2</option>' +
+        '<option value="3"' + (libraryHskFilter === 3 ? ' selected' : '') + '>' + t("library_only_hsk") + '3</option>' +
+        '<option value="4"' + (libraryHskFilter === 4 ? ' selected' : '') + '>' + t("library_only_hsk") + '4</option>' +
+        '<option value="5"' + (libraryHskFilter === 5 ? ' selected' : '') + '>' + t("library_only_hsk") + '5</option>' +
+        '<option value="6"' + (libraryHskFilter === 6 ? ' selected' : '') + '>' + t("library_only_hsk") + '6</option>' +
+        '</select>' +
+        '<span class="muted" style="font-size:0.85rem">' + filtered.length + ' ' + (filtered.length === 1 ? t("library_story") : t("library_stories")) + '</span>' +
+        '</div>' +
+        '<p class="muted" style="margin-bottom: 24px;">' + t("library_choose") + '</p>';
+      for (var i = 0; i < filtered.length; i++) {
+        var s = filtered[i];
+        html += '<a href="#" class="story-card" data-story-id="' + escapeHtml(s.id) + '">' +
+          '<div class="icon">📖</div><div>' +
+          '<h2>' + escapeHtml(s.title) + '</h2>' +
+          '<div class="pinyin">' + escapeHtml(s.titlePinyin || "") + '</div>' +
+          '<div class="en">' + escapeHtml(getStoryTitleTranslation(s) || "") + '</div>' +
+          '<span class="badge">HSK ' + (s.difficulty || 1) + '</span></div></a>';
+      }
+      if (filtered.length === 0) {
+        html += '<p class="muted">' + t("library_empty") + '</p>';
+      }
+      el.innerHTML = html;
+      var filterSelect = document.getElementById("library-hsk-filter");
+      if (filterSelect) {
+        filterSelect.onchange = function() {
+          libraryHskFilter = parseInt(filterSelect.value, 10) || 0;
+          renderLibrary();
+        };
+      }
+      el.querySelectorAll(".story-card").forEach(function(card) {
+        card.addEventListener("click", function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var id = card.getAttribute("data-story-id");
+          if (id) openStory(id);
+        });
+      });
+    }
+
+    function segmentText(text, pinyin) {
+      if (!text) return [];
+      var pyParts = (pinyin || "").trim().split(/\s+/);
+      var tokens = [];
+      var i = 0;
+      while (i < text.length) {
+        var word = findLongestWord(text, i);
+        if (word && word.length > 0) {
+          var py = pyParts.slice(i, i + word.length).join(" ");
+          tokens.push({ char: word, py: py });
+          i += word.length;
+        } else {
+          var c = text[i];
+          tokens.push({ char: c, py: pyParts[i] || "" });
+          i += 1;
+        }
+      }
+      return tokens;
+    }
+
+    var currentStory = null;
+    var selectedSentenceIndex = null;
+    var currentTime = 0;
+    var duration = 0;
+    var currentSegmentIndex = null;
+    var playInterval = null;
+    var audioEl = null;
+    var ttsSentenceIndex = 0;
+    var playbackSpeed = (function() {
+      try {
+        var s = localStorage.getItem("kanmandarin_playback_speed");
+        if (s != null) { var n = parseFloat(s); if (n >= 0.5 && n <= 2) return n; }
+      } catch (e) {}
+      return 1;
+    })();
+
+    function openStory(id) {
+      if (playInterval) { clearInterval(playInterval); playInterval = null; }
+      if (audioEl) { try { audioEl.pause(); } catch (e) {} audioEl = null; }
+      currentStory = STORIES.find(function(s) { return s.id === id; });
+      if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
+      selectedSentenceIndex = null;
+      currentTime = 0;
+      currentSegmentIndex = null;
+      ttsSentenceIndex = 0;
+      document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
+      document.querySelectorAll(".nav-link").forEach(function(l) { l.classList.remove("active"); });
+      var readerScreen = document.getElementById("screen-reader");
+      if (!readerScreen) return;
+      readerScreen.classList.add("active");
+      if (currentStory.audioUrl) {
+        audioEl = new Audio(currentStory.audioUrl);
+        audioEl.playbackRate = playbackSpeed;
+        audioEl.addEventListener("timeupdate", function() {
+          currentTime = audioEl.currentTime;
+          updateTimeDisplay();
+          updateHighlight();
+        });
+        audioEl.addEventListener("ended", function() {
+          playInterval = null;
+          var btn = document.querySelector("#play-btn");
+          if (btn) btn.textContent = "▶";
+        });
+      }
+      renderReader();
+    }
+
+    function updateSelectedSentenceBox() {
+      var box = document.getElementById("selected-sentence-box");
+      if (!box) return;
+      if (selectedSentenceIndex == null || !currentStory || !currentStory.sentences[selectedSentenceIndex]) {
+        box.innerHTML = '<span class="empty">' + t("reader_click_sentence") + '</span>';
+        box.className = "selected-sentence-box empty";
+        return;
+      }
+      var seg = currentStory.sentences[selectedSentenceIndex];
+      var translation = (getSentenceTranslation(seg) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      var pinyin = (seg.pinyin || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      box.className = "selected-sentence-box";
+      box.innerHTML = '<div class="translation-top">' + translation + '</div><div class="pinyin-top">' + pinyin + '</div>';
+    }
+
+    function renderReader() {
+      if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
+      var readerScreen = document.getElementById("screen-reader");
+      if (!readerScreen) return;
+
+      var total = currentStory.sentences[currentStory.sentences.length - 1].end;
+      duration = total;
+      var isPlaying = !!playInterval || (window.speechSynthesis && window.speechSynthesis.speaking);
+
+      var sentencesHtml = "";
+      for (var idx = 0; idx < currentStory.sentences.length; idx++) {
+        var seg = currentStory.sentences[idx];
+        var text = seg.text || "";
+        var pinyin = seg.pinyin || "";
+        var tokens = segmentText(text, pinyin);
+        var highlight = currentSegmentIndex === idx ? " highlight" : "";
+        var selected = selectedSentenceIndex === idx ? " selected" : "";
+        var charsLine = "";
+        for (var j = 0; j < tokens.length; j++) {
+          var c = tokens[j].char;
+          charsLine += '<span class="char" data-char="' + c.replace(/"/g, "&quot;") + '">' + c + '</span>';
+        }
+        sentencesHtml += '<div class="sentence' + highlight + selected + '" data-segment-index="' + idx + '">' +
+          '<div class="chars">' + charsLine + '</div></div>';
+      }
+
+      var title = (currentStory.title || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      var titlePinyin = (currentStory.titlePinyin || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      var titleEn = (getStoryTitleTranslation(currentStory) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+
+      readerScreen.innerHTML =
+        '<a href="#" class="back" id="back-to-library">← ' + t("reader_back") + '</a>' +
+        '<div class="reader-header">' +
+          '<h1>' + title + '</h1>' +
+          '<div class="pinyin">' + titlePinyin + '</div>' +
+          '<div class="en">' + titleEn + '</div>' +
+          '<span class="badge">HSK ' + (currentStory.difficulty || 1) + '</span>' +
+        '</div>' +
+        '<div id="selected-sentence-box" class="selected-sentence-box empty">' + t("reader_click_sentence") + '</div>' +
+        '<div id="reader-sentences">' + sentencesHtml + '</div>' +
+        '<div class="audio-bar">' +
+          '<div class="controls">' +
+            '<button type="button" id="play-btn">' + (isPlaying ? "⏸" : "▶") + '</button>' +
+            '<span class="time"><span id="time-current">0:00</span> / <span id="time-total">' + formatTime(total) + '</span></span>' +
+          '</div>' +
+          '<input type="range" id="seek" min="0" max="' + total + '" step="0.1" value="' + currentTime + '">' +
+          '<div class="speed-row" style="flex-wrap:wrap;gap:8px">' +
+            '<label for="speed-select">' + t("speed_label") + '</label>' +
+            '<select id="speed-select">' +
+              '<option value="0.5"' + (playbackSpeed === 0.5 ? ' selected' : '') + '>0.5×</option>' +
+              '<option value="0.75"' + (playbackSpeed === 0.75 ? ' selected' : '') + '>0.75×</option>' +
+              '<option value="1"' + (playbackSpeed === 1 ? ' selected' : '') + '>1×</option>' +
+              '<option value="1.25"' + (playbackSpeed === 1.25 ? ' selected' : '') + '>1.25×</option>' +
+              '<option value="1.5"' + (playbackSpeed === 1.5 ? ' selected' : '') + '>1.5×</option>' +
+              '<option value="1.75"' + (playbackSpeed === 1.75 ? ' selected' : '') + '>1.75×</option>' +
+              '<option value="2"' + (playbackSpeed === 2 ? ' selected' : '') + '>2×</option>' +
+            '</select>' +
+            (window.speechSynthesis ? '' : '<span class="muted" style="font-size:0.8rem">Vorlesen nur per Webserver (z.&nbsp;B. <strong>start-server.bat</strong> dann <strong>http://localhost:8080</strong>). Nicht als file:// öffnen.</span>') +
+          '</div>' +
+        '</div>';
+
+      var backBtn = readerScreen.querySelector("#back-to-library");
+      if (backBtn) backBtn.onclick = function(e) { e.preventDefault(); showScreen("library"); };
+      var playBtn = readerScreen.querySelector("#play-btn");
+      if (playBtn) playBtn.onclick = togglePlay;
+      var seekEl = readerScreen.querySelector("#seek");
+      if (seekEl) seekEl.oninput = function(e) {
+        currentTime = parseFloat(e.target.value);
+        updateTimeDisplay();
+        updateHighlight();
+        if (audioEl) audioEl.currentTime = currentTime;
+        if (window.speechSynthesis && window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+      };
+      var speedSelect = readerScreen.querySelector("#speed-select");
+      if (speedSelect) {
+        speedSelect.value = String(playbackSpeed);
+        speedSelect.onchange = function() {
+          playbackSpeed = parseFloat(speedSelect.value);
+          try { localStorage.setItem("kanmandarin_playback_speed", String(playbackSpeed)); } catch (e) {}
+          if (audioEl) audioEl.playbackRate = playbackSpeed;
+        };
+      }
+
+      var sentenceDivs = readerScreen.querySelectorAll(".sentence");
+      for (var s = 0; s < sentenceDivs.length; s++) {
+        (function(idx) {
+          var div = sentenceDivs[idx];
+          div.onclick = function(e) {
+            if (e.target.classList && e.target.classList.contains("char")) return;
+            selectedSentenceIndex = idx;
+            readerScreen.querySelectorAll(".sentence").forEach(function(el) { el.classList.remove("selected"); });
+            div.classList.add("selected");
+            updateSelectedSentenceBox();
+          };
+        })(s);
+      }
+      var charSpans = readerScreen.querySelectorAll(".char");
+      for (var k = 0; k < charSpans.length; k++) {
+        (function(span) {
+          span.onclick = function(e) {
+            e.stopPropagation();
+            var ch = span.getAttribute("data-char");
+            var entry = lookup(ch);
+            var exampleSentence = "";
+            var exampleTranslation = "";
+            var contextPinyin = "";
+            var sentenceEl = span.closest && span.closest(".sentence");
+            if (sentenceEl && currentStory && currentStory.sentences) {
+              var segIdx = sentenceEl.getAttribute("data-segment-index");
+              if (segIdx !== null && segIdx !== "") {
+                var seg = currentStory.sentences[parseInt(segIdx, 10)];
+                if (seg) {
+                  exampleSentence = seg.text || "";
+                  exampleTranslation = getSentenceTranslation(seg) || "";
+                  var tokens = segmentText(seg.text, seg.pinyin);
+                  var charsDiv = span.parentElement;
+                  var idx = charsDiv ? Array.prototype.indexOf.call(charsDiv.children, span) : -1;
+                  if (idx >= 0 && tokens[idx]) contextPinyin = tokens[idx].py || "";
+                }
+              }
+            }
+            showPopup(entry, e.clientX, e.clientY, exampleSentence, exampleTranslation, contextPinyin);
+          };
+        })(charSpans[k]);
+      }
+      updateTimeDisplay();
+      updateSelectedSentenceBox();
+    }
+
+    function updateHighlight() {
+      if (!currentStory || !currentStory.sentences) return;
+      var idx = -1;
+      for (var i = 0; i < currentStory.sentences.length; i++) {
+        var s = currentStory.sentences[i];
+        if (currentTime >= s.start && currentTime < s.end) { idx = i; break; }
+      }
+      currentSegmentIndex = idx >= 0 ? idx : null;
+      var sentences = document.querySelectorAll("#reader-sentences .sentence");
+      for (var j = 0; j < sentences.length; j++) {
+        sentences[j].classList.toggle("highlight", j === currentSegmentIndex);
+      }
+    }
+
+    function updateTimeDisplay() {
+      const cur = document.getElementById("time-current");
+      const seek = document.getElementById("seek");
+      if (cur) cur.textContent = formatTime(currentTime);
+      if (seek) seek.value = currentTime;
+    }
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return m + ":" + (sec < 10 ? "0" : "") + sec;
+    }
+
+    function speakNextSentence() {
+      if (!currentStory || !currentStory.sentences || !window.speechSynthesis) return;
+      var sentences = currentStory.sentences;
+      if (ttsSentenceIndex >= sentences.length) {
+        var btn = document.querySelector("#play-btn");
+        if (btn) btn.textContent = "▶";
+        return;
+      }
+      var seg = sentences[ttsSentenceIndex];
+      var textToSpeak = (seg.text || "").trim();
+      if (!textToSpeak) {
+        ttsSentenceIndex++;
+        speakNextSentence();
+        return;
+      }
+      if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+      var u = new SpeechSynthesisUtterance(textToSpeak);
+      u.lang = "zh-CN";
+      u.rate = playbackSpeed;
+      u.volume = 1;
+      var voice = getSelectedVoice();
+      if (voice) u.voice = voice;
+      u.onstart = function() {
+        currentSegmentIndex = ttsSentenceIndex;
+        currentTime = seg.start;
+        updateTimeDisplay();
+        updateHighlight();
+      };
+      u.onend = function() {
+        currentTime = seg.end;
+        updateTimeDisplay();
+        updateHighlight();
+        ttsSentenceIndex++;
+        if (ttsSentenceIndex < sentences.length) {
+          speakNextSentence();
+        } else {
+          var btn = document.querySelector("#play-btn");
+          if (btn) btn.textContent = "▶";
+        }
+      };
+      u.onerror = function() {
+        ttsSentenceIndex++;
+        if (ttsSentenceIndex < sentences.length) speakNextSentence();
+        else { var btn = document.querySelector("#play-btn"); if (btn) btn.textContent = "▶"; }
+      };
+      window.speechSynthesis.speak(u);
+    }
+
+    function togglePlay() {
+      var playBtn = document.querySelector("#play-btn");
+      if (audioEl) {
+        if (audioEl.paused) {
+          audioEl.currentTime = currentTime;
+          audioEl.play().catch(function() {});
+          if (playBtn) playBtn.textContent = "⏸";
+        } else {
+          audioEl.pause();
+          currentTime = audioEl.currentTime;
+          if (playBtn) playBtn.textContent = "▶";
+        }
+        return;
+      }
+      if (window.speechSynthesis && window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        if (currentStory && currentStory.sentences && ttsSentenceIndex < currentStory.sentences.length) {
+          currentTime = currentStory.sentences[ttsSentenceIndex].start;
+          updateTimeDisplay();
+          updateHighlight();
+        }
+        if (playBtn) playBtn.textContent = "▶";
+        return;
+      }
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+        if (playBtn) playBtn.textContent = "▶";
+        return;
+      }
+      if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
+      if (!window.speechSynthesis) {
+        if (playBtn) playBtn.textContent = "▶";
+        alert(t("audio_need_server"));
+        return;
+      }
+      window.speechSynthesis.getVoices();
+      if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+      var sentences = currentStory.sentences;
+      for (var i = 0; i < sentences.length; i++) {
+        if (currentTime >= sentences[i].start && currentTime < sentences[i].end) {
+          ttsSentenceIndex = i;
+          break;
+        }
+        if (currentTime < sentences[i].start) {
+          ttsSentenceIndex = i;
+          break;
+        }
+        ttsSentenceIndex = i + 1;
+      }
+      if (ttsSentenceIndex >= sentences.length) ttsSentenceIndex = 0;
+      if (playBtn) playBtn.textContent = "⏸";
+      speakNextSentence();
+    }
+
+    function showPopup(entry, x, y, exampleSentence, exampleTranslation, contextPinyin) {
+      exampleSentence = exampleSentence || "";
+      exampleTranslation = exampleTranslation || "";
+      contextPinyin = contextPinyin || "";
+      var popup = document.getElementById("popup");
+      var wordEsc = (entry.word || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      var pinyinShow = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "?");
+      var pinyinEsc = pinyinShow.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      var notFound = entry.meaning === "Nicht gefunden.";
+      var meaningDisplay = notFound ? t("not_found") : (entry.meaning || "");
+      var meaningEsc = (meaningDisplay || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      var exampleLine = (notFound && (exampleSentence || exampleTranslation))
+        ? "<div class=\"meaning\" style=\"margin-top:6px;font-size:0.9rem;color:#555\">" + t("in_sentence") + " " + (exampleSentence || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;") + " — " + (exampleTranslation || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;") + "</div>"
+        : "";
+      var alreadySaved = isWordSaved(entry.word);
+      var saveHtml = alreadySaved
+        ? "<span class=\"saved-msg\" style=\"display:inline\">" + t("popup_saved") + "</span>"
+        : "<button type=\"button\" id=\"popup-save\">💾 " + t("popup_save") + "</button>";
+      popup.innerHTML =
+        "<div><span class=\"word\">" + wordEsc + "</span><span class=\"pinyin\">" + pinyinEsc + "</span></div>" +
+        "<div class=\"meaning\">" + meaningEsc + "</div>" +
+        exampleLine +
+        (entry.hsk ? "<span class=\"hsk\">HSK " + entry.hsk + "</span>" : "") +
+        "<div class=\"actions\">" +
+          saveHtml +
+          "<button type=\"button\" id=\"popup-play\">🔊 " + t("popup_play") + "</button>" +
+          "<button type=\"button\" id=\"popup-close\">" + t("popup_close") + "</button>" +
+        "</div>" +
+        "<div id=\"popup-saved-msg\" class=\"saved-msg\" style=\"display:none\">" + t("popup_saved_ok") + "</div>";
+      popup.style.display = "block";
+
+      var saveBtn = document.getElementById("popup-save");
+      if (saveBtn) {
+        saveBtn.onclick = function() {
+          saveWord(entry, exampleSentence, exampleTranslation, contextPinyin);
+          var msg = document.getElementById("popup-saved-msg");
+          if (msg) { msg.style.display = "block"; }
+        };
+      }
+      var playBtn = document.getElementById("popup-play");
+      if (playBtn) {
+        playBtn.onclick = function() {
+          if (!window.speechSynthesis) {
+            alert(t("audio_need_server"));
+            return;
+          }
+          var word = (entry.word || "").trim();
+          if (!word) return;
+          if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+          var u = new SpeechSynthesisUtterance(word);
+          u.lang = "zh-CN";
+          u.volume = 1;
+          var voice = getSelectedVoice();
+          if (voice) u.voice = voice;
+          window.speechSynthesis.speak(u);
+        };
+      }
+      var closeBtn = document.getElementById("popup-close");
+      if (closeBtn) closeBtn.onclick = function() { popup.style.display = "none"; };
+    }
+
+    document.addEventListener("mousedown", (e) => {
+      const p = document.getElementById("popup");
+      if (p && p.style.display === "block" && !p.contains(e.target)) p.style.display = "none";
+    });
+
+    function showScreen(screenId) {
+      currentStory = null;
+      selectedSentenceIndex = null;
+      if (playInterval) { clearInterval(playInterval); playInterval = null; }
+      if (audioEl) { try { audioEl.pause(); } catch (e) {} audioEl = null; }
+      document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
+      document.getElementById("screen-" + screenId).classList.add("active");
+      document.querySelectorAll(".nav-link").forEach(function(l) {
+        l.classList.toggle("active", l.getAttribute("data-screen") === screenId);
+      });
+      if (screenId === "library") renderLibrary();
+      if (screenId === "saved") renderSavedScreen();
+      if (screenId === "settings") renderSettings();
+    }
+
+    document.querySelectorAll(".nav-link").forEach(function(link) {
+      link.addEventListener("click", function(e) {
+        e.preventDefault();
+        showScreen(link.getAttribute("data-screen"));
+      });
+    });
+
+    document.getElementById("toggle-sidebar").addEventListener("click", function() {
+      document.getElementById("sidebar").classList.toggle("hidden");
+    });
+    var btnGenerate = document.getElementById("btn-generate");
+    if (btnGenerate) btnGenerate.onclick = generateStory;
+    var btnNewClear = document.getElementById("btn-new-clear");
+    if (btnNewClear) btnNewClear.onclick = clearNewStoryForm;
+
+    applyI18n();
+    renderLibrary();
+  </script>
+</body>
+</html>

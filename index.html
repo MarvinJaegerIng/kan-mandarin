@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kan Mandarin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 1rem; }
+    h1 { font-size: 1.4rem; }
+    a.app-link { display: inline-block; margin: 1rem 0; padding: 0.75rem 1.25rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; }
+    a.app-link:hover { background: #1d4ed8; }
+    .phone-url { margin-top: 1.5rem; padding: 1rem; background: #f0f4ff; border-radius: 8px; font-size: 0.9rem; word-break: break-all; }
+    .phone-url strong { display: block; margin-bottom: 0.5rem; color: #333; }
+    .muted { color: #666; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Kan Mandarin</h1>
+  <p>Chinesisch lesen mit Pinyin, Übersetzung und KI-Generierung.</p>
+  <a class="app-link" href="app-standalone.html">App starten</a>
+  <div class="phone-url">
+    <strong>Im gleichen WLAN auf dem Handy/Tablet:</strong>
+    <span id="phone-url">Wird geladen …</span>
+    <p class="muted">Dieser Link funktioniert nur, wenn PC und Handy im selben WLAN sind.</p>
+    <p style="margin-top: 0.75rem;"><a href="hilfe-handy.html" style="font-size: 0.9rem;">Handy erreicht die App nicht? → Checkliste & Hilfe</a></p>
+  </div>
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var ip = params.get('ip');
+      var port = window.location.port || '8080';
+      var url = ip
+        ? 'http://' + ip + ':' + port + '/app-standalone.html'
+        : 'http://' + window.location.host + '/app-standalone.html';
+      document.getElementById('phone-url').textContent = url;
+    })();
+  </script>
+</body>
+</html>

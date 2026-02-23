@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Start Kan Mandarin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 520px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      line-height: 1.6;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p { margin: 0.75rem 0; color: #444; }
+    ol {
+      margin: 1rem 0;
+      padding-left: 1.5rem;
+    }
+    li { margin: 0.5rem 0; }
+    code {
+      background: #f0f0f0;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+    a.btn {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    a.btn:hover { background: #1d4ed8; }
+    .note { font-size: 0.9rem; color: #666; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Kan Mandarin</h1>
+  <p><strong>Im WLAN starten (PC + Handy):</strong> Doppelklick auf <code>start-server.bat</code> im Projektordner. Der Server startet, der Browser öffnet sich, und die Adresse fürs Handy wird angezeigt. Einfach das Fenster „Kan Mandarin Server“ offen lassen.</p>
+  <p>Start the app in two steps:</p>
+  <ol>
+    <li>Open a terminal in this folder and run: <code>npm install</code></li>
+    <li>Then run: <code>npm run dev</code></li>
+  </ol>
+  <p>When you see “Ready” in the terminal, click below to open the app.</p>
+  <a href="http://localhost:3000" class="btn" target="_blank" rel="noopener">Open Kan Mandarin →</a>
+  <p class="note">If the link doesn’t work, make sure the dev server is running (step 2) and try again.</p>
+
+  <h2 style="margin-top: 2rem;">Auf dem Handy im gleichen WLAN nutzen</h2>
+  <p>Damit du die App auf deinem Android-Handy (oder Tablet) nutzen kannst, muss sie im Netzwerk erreichbar sein.</p>
+  <p><strong>Variante A – Nur die Standalone-App (ohne npm):</strong></p>
+  <ol>
+    <li>Im <strong>Projektordner</strong> eine Eingabeaufforderung bzw. Terminal öffnen.</li>
+    <li>Einen kleinen Webserver starten:
+      <ul style="margin-top: 0.5rem;">
+        <li><strong>Python:</strong> <code>python -m http.server 8080</code></li>
+        <li><strong>Python 3:</strong> <code>py -m http.server 8080</code></li>
+        <li><strong>Node:</strong> <code>npx -y serve -p 8080</code></li>
+      </ul>
+    </li>
+    <li>Die <strong>IP-Adresse deines PCs</strong> im WLAN herausfinden (z. B. Windows: <code>ipconfig</code> → „IPv4-Adresse“ beim WLAN-Adapter, z. B. 192.168.1.100).</li>
+    <li>Auf dem Handy den <strong>Browser</strong> öffnen und eingeben: <code>http://DEINE-IP:8080/app-standalone.html</code> (DEINE-IP ersetzen, z. B. <code>http://192.168.1.100:8080/app-standalone.html</code>).</li>
+  </ol>
+  <p><strong>Variante B – Mit Next.js (npm run dev):</strong></p>
+  <p>Nach <code>npm run dev</code> auf dem Handy im Browser: <code>http://DEINE-IP:3000</code> öffnen.</p>
+  <p class="note">PC und Handy müssen im <strong>gleichen WLAN</strong> sein. Wenn es nicht geht: Firewall auf dem PC prüfen (Port 8080 bzw. 3000 erlauben).</p>
+</body>
+</html>
