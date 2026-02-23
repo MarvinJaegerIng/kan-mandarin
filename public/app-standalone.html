@@ -311,7 +311,8 @@
         status_enter_desc: "Bitte zuerst eine Beschreibung auf Englisch eingeben.", status_api_key: "Bitte in Einstellungen einen ", status_api_key_suffix: " API-Schlüssel eintragen.",
         status_generating: "Generiere Geschichte …", status_created: "Geschichte wurde erstellt und zur Bibliothek hinzugefügt.", status_error: "Fehler bei der Generierung.",
         app_lang: "Sprache der Anwendung", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
-        audio_need_server: "Audio funktioniert nur, wenn die App über einen Webserver geöffnet wird. Bitte starten Sie start-server.bat und rufen Sie im Browser http://localhost:8080 auf (nicht als Datei/file:// öffnen)."
+        audio_need_server: "Audio funktioniert nur, wenn die App über einen Webserver geöffnet wird. Bitte starten Sie start-server.bat und rufen Sie im Browser http://localhost:8080 auf (nicht als Datei/file:// öffnen).",
+        audio_not_supported: "Sprachausgabe ist in diesem Browser oder Kontext nicht verfügbar."
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -342,7 +343,8 @@
         status_enter_desc: "Please enter a description in English first.", status_api_key: "Please enter a ", status_api_key_suffix: " API key in Settings.",
         status_generating: "Generating story …", status_created: "Story was created and added to the library.", status_error: "Error generating story.",
         app_lang: "App language", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
-        audio_need_server: "Audio only works when the app is opened via a web server. Please run start-server.bat and open http://localhost:8080 in your browser (do not open as file://)."
+        audio_need_server: "Audio only works when the app is opened via a web server. Please run start-server.bat and open http://localhost:8080 in your browser (do not open as file://).",
+        audio_not_supported: "Speech playback is not available in this browser or context."
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -373,9 +375,12 @@
         status_enter_desc: "Introduce primero una descripción en inglés.", status_api_key: "Introduce una clave API de ", status_api_key_suffix: " en Ajustes.",
         status_generating: "Generando historia …", status_created: "La historia se creó y se añadió a la biblioteca.", status_error: "Error al generar la historia.",
         app_lang: "Idioma de la aplicación", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
-        audio_need_server: "El audio solo funciona cuando la app se abre mediante un servidor web. Ejecuta start-server.bat y abre http://localhost:8080 en el navegador (no como file://)."
+        audio_need_server: "El audio solo funciona cuando la app se abre mediante un servidor web. Ejecuta start-server.bat y abre http://localhost:8080 en el navegador (no como file://).",
+        audio_not_supported: "La voz no está disponible en este navegador o contexto."
       }
     };
+    function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
+    function getAudioUnavailableMessage() { return isFileProtocol() ? t("audio_need_server") : t("audio_not_supported"); }
     function t(key) {
       var lang = getUILang();
       var s = UI_STRINGS[lang] && UI_STRINGS[lang][key];
@@ -1028,7 +1033,7 @@
               '<option value="1.75"' + (playbackSpeed === 1.75 ? ' selected' : '') + '>1.75×</option>' +
               '<option value="2"' + (playbackSpeed === 2 ? ' selected' : '') + '>2×</option>' +
             '</select>' +
-            (window.speechSynthesis ? '' : '<span class="muted" style="font-size:0.8rem">Vorlesen nur per Webserver (z.&nbsp;B. <strong>start-server.bat</strong> dann <strong>http://localhost:8080</strong>). Nicht als file:// öffnen.</span>') +
+            (window.speechSynthesis ? '' : (isFileProtocol() ? '<span class="muted" style="font-size:0.8rem">Vorlesen nur per Webserver (z.&nbsp;B. <strong>start-server.bat</strong> dann <strong>http://localhost:8080</strong>). Nicht als file:// öffnen.</span>' : '<span class="muted" style="font-size:0.8rem">' + (t("audio_not_supported")) + '</span>')) +
           '</div>' +
         '</div>';
 
@@ -1208,7 +1213,7 @@
       if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
       if (!window.speechSynthesis) {
         if (playBtn) playBtn.textContent = "▶";
-        alert(t("audio_need_server"));
+        alert(getAudioUnavailableMessage());
         return;
       }
       window.speechSynthesis.getVoices();
@@ -1273,7 +1278,7 @@
       if (playBtn) {
         playBtn.onclick = function() {
           if (!window.speechSynthesis) {
-            alert(t("audio_need_server"));
+            alert(getAudioUnavailableMessage());
             return;
           }
           var word = (entry.word || "").trim();
