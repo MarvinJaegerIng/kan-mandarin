@@ -197,8 +197,24 @@
               <span data-i18n="voice_show_all">Alle Stimmen anzeigen (auch andere Sprachen)</span>
             </label>
             <ul id="settings-voice-list" class="voice-list"></ul>
+            <div class="settings-row" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;">
+              <label data-i18n="settings_google_tts">Online-Stimmen (Google Cloud TTS)</label>
+              <p class="muted" style="font-size: 0.85rem; margin: 4px 0 8px 0;" data-i18n="settings_google_tts_desc">Andere Stimmen als Microsoft: API-Schlüssel von Google Cloud (Text-to-Speech API aktivieren). Optional – leer lassen für System-Stimmen.</p>
+              <input type="password" id="setting-google-tts-key" placeholder="AIza..." style="max-width:400px;margin-bottom:8px;">
+              <label for="setting-google-tts-voice" style="display:block;margin-top:8px;">Stimme</label>
+              <select id="setting-google-tts-voice" style="min-width:220px;">
+                <option value="">— System-Stimmen nutzen —</option>
+                <option value="zh-CN-Standard-A">zh-CN Standard A (weiblich)</option>
+                <option value="zh-CN-Standard-B">zh-CN Standard B (männlich)</option>
+                <option value="zh-CN-Standard-C">zh-CN Standard C (weiblich)</option>
+                <option value="zh-CN-Standard-D">zh-CN Standard D (männlich)</option>
+                <option value="zh-CN-Wavenet-A">zh-CN Wavenet A (weiblich)</option>
+                <option value="zh-CN-Wavenet-B">zh-CN Wavenet B (männlich)</option>
+                <option value="zh-CN-Wavenet-C">zh-CN Wavenet C (weiblich)</option>
+                <option value="zh-CN-Wavenet-D">zh-CN Wavenet D (männlich)</option>
+              </select>
+            </div>
           </div>
-        </div>
         <div id="screen-reader" class="screen"></div>
       </div>
     </div>
@@ -299,6 +315,7 @@
         settings_title: "Einstellungen", settings_desc: "Für „Neue Geschichte“: Anbieter wählen und passenden API-Schlüssel eintragen. Schlüssel werden nur lokal gespeichert.",
         settings_provider: "KI-Anbieter", settings_gemini_key: "Gemini API-Schlüssel", settings_openai_key: "OpenAI API-Schlüssel",
         settings_voice: "Stimme für Vorlesen (Audio)", settings_voice_desc: "Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.",
+        settings_google_tts: "Online-Stimmen (Google Cloud TTS)", settings_google_tts_desc: "Andere Stimmen als Microsoft: API-Schlüssel von Google Cloud (Text-to-Speech API aktivieren). Optional – leer lassen für System-Stimmen.",
         help_title: "Hilfe", help_intro: "So nutzt du die App (auch für andere Nutzer, die die Seite im Internet öffnen):",
         help_library: "Bibliothek – Auf der Startseite (Library) eine Geschichte auswählen und anklicken.",
         help_reader: "Leser – Auf einen Satz klicken: Übersetzung und Pinyin erscheinen. Auf ein Zeichen klicken: Bedeutung, Pinyin und Lautsprecher im Popup.",
@@ -333,6 +350,7 @@
         settings_title: "Settings", settings_desc: "For „New Story“: choose provider and enter API key. Keys are stored locally only.",
         settings_provider: "AI provider", settings_gemini_key: "Gemini API key", settings_openai_key: "OpenAI API key",
         settings_voice: "Voice for reading (audio)", settings_voice_desc: "Chinese voices on your system. Click „Sample“ for a short preview.",
+        settings_google_tts: "Online voices (Google Cloud TTS)", settings_google_tts_desc: "Different voices than Microsoft: API key from Google Cloud (enable Text-to-Speech API). Optional – leave empty for system voices.",
         help_title: "Help", help_intro: "How to use the app (for you and others who open the site on the internet):",
         help_library: "Library – On the start page (Library), choose a story and click it.",
         help_reader: "Reader – Click a sentence to see translation and pinyin. Click a character for meaning, pinyin and speaker in the popup.",
@@ -367,6 +385,7 @@
         settings_title: "Ajustes", settings_desc: "Para „Nueva historia“: elige el proveedor e introduce la clave API. Las claves se guardan solo localmente.",
         settings_provider: "Proveedor de IA", settings_gemini_key: "Clave API Gemini", settings_openai_key: "Clave API OpenAI",
         settings_voice: "Voz para leer (audio)", settings_voice_desc: "Voces chinas de tu sistema. Haz clic en „Muestra“ para una vista previa.",
+        settings_google_tts: "Voces en línea (Google Cloud TTS)", settings_google_tts_desc: "Otras voces además de Microsoft: clave API de Google Cloud (activa la API Text-to-Speech). Opcional – déjalo vacío para voces del sistema.",
         help_title: "Ayuda", help_intro: "Cómo usar la app (para ti y para otros que abran la página en internet):",
         help_library: "Biblioteca – En la página de inicio (Library), elige una historia y haz clic.",
         help_reader: "Lector – Haz clic en una oración para ver traducción y pinyin. Haz clic en un carácter para significado, pinyin y altavoz en el popup.",
@@ -572,6 +591,9 @@
     var AI_PROVIDER_KEY = "kanmandarin_ai_provider";
     var VOICE_KEY = "kanmandarin_voice";
     var SHOW_ALL_VOICES_KEY = "kanmandarin_show_all_voices";
+    var GOOGLE_TTS_KEY = "kanmandarin_google_tts_key";
+    var GOOGLE_TTS_VOICE = "kanmandarin_google_tts_voice";
+    var googleTtsAudio = null;
     var SAMPLE_TEXT = "你好，今天天气很好。";
     function getShowAllVoices() {
       try { return localStorage.getItem(SHOW_ALL_VOICES_KEY) === "1"; } catch (e) { return false; }
@@ -579,6 +601,11 @@
     function setShowAllVoices(show) {
       try { localStorage.setItem(SHOW_ALL_VOICES_KEY, show ? "1" : "0"); } catch (e) {}
     }
+    function getGoogleTtsKey() { try { return localStorage.getItem(GOOGLE_TTS_KEY) || ""; } catch (e) { return ""; } }
+    function setGoogleTtsKey(k) { try { localStorage.setItem(GOOGLE_TTS_KEY, k || ""); } catch (e) {} }
+    function getGoogleTtsVoice() { try { return localStorage.getItem(GOOGLE_TTS_VOICE) || ""; } catch (e) { return ""; } }
+    function setGoogleTtsVoice(v) { try { localStorage.setItem(GOOGLE_TTS_VOICE, v || ""); } catch (e) {} }
+    function useGoogleTts() { return !!(getGoogleTtsKey() && getGoogleTtsVoice()); }
     function getChineseVoices() {
       var all = [];
       try { all = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; } catch (e) {}
@@ -621,6 +648,39 @@
         if (voices[i].name === voiceName) { u.voice = voices[i]; break; }
       }
       window.speechSynthesis.speak(u);
+    }
+    function speakWithGoogleTTS(text, onEnd) {
+      var key = getGoogleTtsKey();
+      var voiceName = getGoogleTtsVoice();
+      if (!key || !voiceName || !text.trim()) { if (onEnd) onEnd(); return; }
+      if (googleTtsAudio) { googleTtsAudio.pause(); googleTtsAudio = null; }
+      var url = "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + encodeURIComponent(key);
+      var body = JSON.stringify({
+        input: { text: text },
+        voice: { languageCode: "zh-CN", name: voiceName },
+        audioConfig: { audioEncoding: "MP3", speakingRate: Math.max(0.25, Math.min(4, playbackSpeed)) }
+      });
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: body })
+        .then(function(r) {
+          if (!r.ok) throw new Error("TTS API error");
+          return r.json();
+        })
+        .then(function(data) {
+          if (!data.audioContent) throw new Error("No audio");
+          var binary = atob(data.audioContent);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          var blob = new Blob([bytes], { type: "audio/mp3" });
+          var objectUrl = URL.createObjectURL(blob);
+          googleTtsAudio = new Audio(objectUrl);
+          googleTtsAudio.onended = googleTtsAudio.onerror = function() {
+            URL.revokeObjectURL(objectUrl);
+            googleTtsAudio = null;
+            if (onEnd) onEnd();
+          };
+          googleTtsAudio.play().catch(function() { if (onEnd) onEnd(); });
+        })
+        .catch(function() { googleTtsAudio = null; if (onEnd) onEnd(); });
     }
     function getOpenAIKey() {
       try { return localStorage.getItem(OPENAI_KEY_KEY) || ""; } catch (e) { return ""; }
@@ -723,6 +783,10 @@
           window.speechSynthesis.onvoiceschanged = fillVoiceList;
         }
       }
+      var gTtsKey = document.getElementById("setting-google-tts-key");
+      var gTtsVoice = document.getElementById("setting-google-tts-voice");
+      if (gTtsKey) { gTtsKey.value = getGoogleTtsKey(); gTtsKey.onchange = gTtsKey.onblur = function() { setGoogleTtsKey(gTtsKey.value); }; }
+      if (gTtsVoice) { gTtsVoice.value = getGoogleTtsVoice(); gTtsVoice.onchange = function() { setGoogleTtsVoice(gTtsVoice.value); }; }
     }
     function setNewStoryStatus(msg, isError) {
       var el = document.getElementById("new-story-status");
@@ -1123,6 +1187,7 @@
         updateHighlight();
         if (audioEl) audioEl.currentTime = currentTime;
         if (window.speechSynthesis && window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+        if (googleTtsAudio) { googleTtsAudio.pause(); googleTtsAudio = null; }
       };
       var speedSelect = readerScreen.querySelector("#speed-select");
       if (speedSelect) {
@@ -1233,6 +1298,40 @@
         speakNextSentence();
         return;
       }
+      if (useGoogleTts()) {
+        currentSegmentIndex = ttsSentenceIndex;
+        currentTime = seg.start;
+        updateTimeDisplay();
+        updateHighlight();
+        if (readingCharInterval) clearInterval(readingCharInterval);
+        var numChars = textToSpeak.length;
+        if (numChars > 0) {
+          var startWall = Date.now();
+          var segDuration = Math.max(0.001, seg.end - seg.start);
+          readingCharInterval = setInterval(function() {
+            var elapsed = (Date.now() - startWall) / 1000;
+            if (elapsed >= segDuration) {
+              clearInterval(readingCharInterval);
+              readingCharInterval = null;
+              setCurrentReadingChar(-1, -1);
+              return;
+            }
+            var charIndex = Math.min(Math.floor((elapsed / segDuration) * numChars), numChars - 1);
+            setCurrentReadingChar(ttsSentenceIndex, charIndex);
+          }, 80);
+        }
+        speakWithGoogleTTS(textToSpeak, function() {
+          if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+          setCurrentReadingChar(-1, -1);
+          currentTime = seg.end;
+          updateTimeDisplay();
+          updateHighlight();
+          ttsSentenceIndex++;
+          if (ttsSentenceIndex < sentences.length) speakNextSentence();
+          else { var btn = document.querySelector("#play-btn"); if (btn) btn.textContent = "▶"; }
+        });
+        return;
+      }
       if (window.speechSynthesis.resume) window.speechSynthesis.resume();
       var u = new SpeechSynthesisUtterance(textToSpeak);
       u.lang = "zh-CN";
@@ -1313,6 +1412,19 @@
         if (playBtn) playBtn.textContent = "▶";
         return;
       }
+      if (googleTtsAudio && !googleTtsAudio.paused) {
+        googleTtsAudio.pause();
+        googleTtsAudio = null;
+        if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+        setCurrentReadingChar(-1, -1);
+        if (currentStory && currentStory.sentences && ttsSentenceIndex < currentStory.sentences.length) {
+          currentTime = currentStory.sentences[ttsSentenceIndex].start;
+          updateTimeDisplay();
+          updateHighlight();
+        }
+        if (playBtn) playBtn.textContent = "▶";
+        return;
+      }
       if (playInterval) {
         clearInterval(playInterval);
         playInterval = null;
@@ -1320,7 +1432,7 @@
         return;
       }
       if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
-      if (!window.speechSynthesis) {
+      if (!useGoogleTts() && !window.speechSynthesis) {
         if (playBtn) playBtn.textContent = "▶";
         alert(getAudioUnavailableMessage());
         return;
@@ -1386,12 +1498,16 @@
       var playBtn = document.getElementById("popup-play");
       if (playBtn) {
         playBtn.onclick = function() {
+          var word = (entry.word || "").trim();
+          if (!word) return;
+          if (useGoogleTts()) {
+            speakWithGoogleTTS(word, function() {});
+            return;
+          }
           if (!window.speechSynthesis) {
             alert(getAudioUnavailableMessage());
             return;
           }
-          var word = (entry.word || "").trim();
-          if (!word) return;
           if (window.speechSynthesis.resume) window.speechSynthesis.resume();
           var u = new SpeechSynthesisUtterance(word);
           u.lang = "zh-CN";
