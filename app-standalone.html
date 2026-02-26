@@ -43,8 +43,9 @@
     .sentence.highlight { background: rgba(37, 99, 235, 0.08); outline: 1px solid rgba(37, 99, 235, 0.2); }
     .sentence.selected { background: rgba(37, 99, 235, 0.12); outline: 1px solid rgba(37, 99, 235, 0.3); }
     .sentence .chars { font-size: 1.5rem; line-height: 1.6; }
-    .sentence .chars span.char { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+    .sentence .chars span.char { cursor: pointer; padding: 2px 4px; border-radius: 4px; color: #1a1a1a; transition: color 0.1s ease; }
     .sentence .chars span.char:hover { background: rgba(37, 99, 235, 0.15); }
+    .sentence .chars span.char.char-reading { color: #2563eb; font-weight: 600; }
     .audio-bar { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; }
     .audio-bar .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .audio-bar button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #e5e5e5; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -191,6 +192,10 @@
           <div class="settings-row" style="margin-top: 24px;">
             <label data-i18n="settings_voice">Stimme für Vorlesen (Audio)</label>
             <p class="muted" style="font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings_voice_desc">Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.</p>
+            <label class="voice-show-all" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:0.9rem;">
+              <input type="checkbox" id="settings-show-all-voices">
+              <span data-i18n="voice_show_all">Alle Stimmen anzeigen (auch andere Sprachen)</span>
+            </label>
             <ul id="settings-voice-list" class="voice-list"></ul>
           </div>
         </div>
@@ -303,6 +308,7 @@
         help_link_gemini: "– kostenloser API-Key für „Neue Geschichte“",
         help_link_openai: "– API-Key, wenn du OpenAI als Anbieter nutzt",
         voice_sample: "Hörprobe", voice_no_found: "Keine chinesischen Stimmen gefunden. System-Sprachoptionen prüfen.",
+        voice_show_all: "Alle Stimmen anzeigen (auch andere Sprachen)",
         library_title: "Bibliothek", library_filter: "HSK-Stufe:", library_all: "Alle", library_only_hsk: "Nur HSK ", library_choose: "Wähle eine Geschichte. Klicke auf Zeichen für Übersetzung.",
         library_stories: "Geschichten", library_story: "Geschichte", library_empty: "Keine Geschichten für diese HSK-Stufe. Wähle „Alle“ oder generiere eine neue Geschichte.",
         counter_label: "Weltweit generierte Geschichten (KI):",
@@ -336,6 +342,7 @@
         help_link_gemini: "– free API key for „New Story“",
         help_link_openai: "– API key when using OpenAI as provider",
         voice_sample: "Sample", voice_no_found: "No Chinese voices found. Check system language options.",
+        voice_show_all: "Show all voices (including other languages)",
         library_title: "Library", library_filter: "HSK level:", library_all: "All", library_only_hsk: "Only HSK ", library_choose: "Choose a story. Click characters for translation.",
         library_stories: "stories", library_story: "story", library_empty: "No stories for this HSK level. Choose „All“ or generate a new story.",
         counter_label: "Stories generated worldwide (AI):",
@@ -369,6 +376,7 @@
         help_link_gemini: "– clave API gratuita para „Nueva historia“",
         help_link_openai: "– clave API si usas OpenAI como proveedor",
         voice_sample: "Muestra", voice_no_found: "No se encontraron voces chinas. Revisa las opciones de idioma del sistema.",
+        voice_show_all: "Mostrar todas las voces (también otros idiomas)",
         library_title: "Biblioteca", library_filter: "Nivel HSK:", library_all: "Todas", library_only_hsk: "Solo HSK ", library_choose: "Elige una historia. Haz clic en los caracteres para la traducción.",
         library_stories: "historias", library_story: "historia", library_empty: "No hay historias para este nivel HSK. Elige „Todas“ o genera una nueva.",
         counter_label: "Historias generadas en todo el mundo (IA):",
@@ -563,7 +571,14 @@
     var GEMINI_KEY_KEY = "kanmandarin_gemini_key";
     var AI_PROVIDER_KEY = "kanmandarin_ai_provider";
     var VOICE_KEY = "kanmandarin_voice";
+    var SHOW_ALL_VOICES_KEY = "kanmandarin_show_all_voices";
     var SAMPLE_TEXT = "你好，今天天气很好。";
+    function getShowAllVoices() {
+      try { return localStorage.getItem(SHOW_ALL_VOICES_KEY) === "1"; } catch (e) { return false; }
+    }
+    function setShowAllVoices(show) {
+      try { localStorage.setItem(SHOW_ALL_VOICES_KEY, show ? "1" : "0"); } catch (e) {}
+    }
     function getChineseVoices() {
       var all = [];
       try { all = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; } catch (e) {}
@@ -586,13 +601,13 @@
     function getSelectedVoice() {
       var name = getSelectedVoiceName();
       if (!name) return null;
+      var allVoices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      for (var j = 0; j < allVoices.length; j++) {
+        if (allVoices[j].name === name) return allVoices[j];
+      }
       var voices = getChineseVoices();
       for (var i = 0; i < voices.length; i++) {
         if (voices[i].name === name) return voices[i];
-      }
-      voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-      for (var j = 0; j < voices.length; j++) {
-        if (voices[j].name === name) return voices[j];
       }
       return null;
     }
@@ -601,7 +616,7 @@
       window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(SAMPLE_TEXT);
       u.lang = "zh-CN";
-      var voices = getChineseVoices().length ? getChineseVoices() : window.speechSynthesis.getVoices();
+      var voices = window.speechSynthesis.getVoices();
       for (var i = 0; i < voices.length; i++) {
         if (voices[i].name === voiceName) { u.voice = voices[i]; break; }
       }
@@ -660,8 +675,26 @@
       }
       var voiceListEl = document.getElementById("settings-voice-list");
       if (voiceListEl) {
+        var showAllCb = document.getElementById("settings-show-all-voices");
+        if (showAllCb) {
+          showAllCb.checked = getShowAllVoices();
+          showAllCb.onchange = function() {
+            setShowAllVoices(showAllCb.checked);
+            fillVoiceList();
+          };
+        }
         function fillVoiceList() {
-          var voices = getChineseVoices();
+          var showAll = getShowAllVoices();
+          var allVoices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+          var voices = showAll ? allVoices.slice() : getChineseVoices();
+          if (showAll && voices.length > 0) {
+            voices.sort(function(a, b) {
+              var aZh = ((a.lang || "").toLowerCase().indexOf("zh") >= 0 || (a.name || "").toLowerCase().indexOf("chinese") >= 0) ? 0 : 1;
+              var bZh = ((b.lang || "").toLowerCase().indexOf("zh") >= 0 || (b.name || "").toLowerCase().indexOf("chinese") >= 0) ? 0 : 1;
+              if (aZh !== bZh) return aZh - bZh;
+              return (a.name || "").localeCompare(b.name || "");
+            });
+          }
           if (voices.length === 0) {
             voiceListEl.innerHTML = "<li class=\"muted\" style=\"padding:8px 0\">" + t("voice_no_found") + "</li>";
             return;
@@ -672,8 +705,9 @@
             var v = voices[i];
             var id = "voice-" + i;
             var checked = v.name === selected ? " checked" : "";
+            var label = (v.name || "Stimme " + (i + 1)) + (v.lang ? " (" + v.lang + ")" : "");
             html += "<li><input type=\"radio\" name=\"tts-voice\" id=\"" + id + "\" value=\"" + (v.name || "").replace(/"/g, "&quot;") + "\"" + checked + ">" +
-              "<label for=\"" + id + "\" class=\"voice-name\">" + (v.name || "Stimme " + (i + 1)) + "</label>" +
+              "<label for=\"" + id + "\" class=\"voice-name\">" + label + "</label>" +
               "<button type=\"button\" class=\"voice-sample-btn\" data-voice-name=\"" + (v.name || "").replace(/"/g, "&quot;") + "\">" + t("voice_sample") + "</button></li>";
           }
           voiceListEl.innerHTML = html;
@@ -962,6 +996,7 @@
     var playInterval = null;
     var audioEl = null;
     var ttsSentenceIndex = 0;
+    var readingCharInterval = null;
     var playbackSpeed = (function() {
       try {
         var s = localStorage.getItem("kanmandarin_playback_speed");
@@ -1155,8 +1190,19 @@
       currentSegmentIndex = idx >= 0 ? idx : null;
       var sentences = document.querySelectorAll("#reader-sentences .sentence");
       for (var j = 0; j < sentences.length; j++) {
-        sentences[j].classList.toggle("highlight", j === currentSegmentIndex);
+        sentences[j].classList.toggle("highlight", j === currentSegmentIndex && !readingCharInterval);
       }
+      if (!readingCharInterval) setCurrentReadingChar(-1, -1);
+    }
+    function setCurrentReadingChar(sentenceIndex, charIndex) {
+      var container = document.getElementById("reader-sentences");
+      if (!container) return;
+      container.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-reading"); });
+      if (sentenceIndex < 0 || charIndex < 0) return;
+      var sentence = container.querySelector('.sentence[data-segment-index="' + sentenceIndex + '"]');
+      if (!sentence) return;
+      var chars = sentence.querySelectorAll(".chars .char");
+      if (chars[charIndex]) chars[charIndex].classList.add("char-reading");
     }
 
     function updateTimeDisplay() {
@@ -1199,8 +1245,27 @@
         currentTime = seg.start;
         updateTimeDisplay();
         updateHighlight();
+        if (readingCharInterval) clearInterval(readingCharInterval);
+        var numChars = textToSpeak.length;
+        if (numChars > 0) {
+          var startWall = Date.now();
+          var segDuration = Math.max(0.001, seg.end - seg.start);
+          readingCharInterval = setInterval(function() {
+            var elapsed = (Date.now() - startWall) / 1000;
+            if (elapsed >= segDuration) {
+              clearInterval(readingCharInterval);
+              readingCharInterval = null;
+              setCurrentReadingChar(-1, -1);
+              return;
+            }
+            var charIndex = Math.min(Math.floor((elapsed / segDuration) * numChars), numChars - 1);
+            setCurrentReadingChar(ttsSentenceIndex, charIndex);
+          }, 80);
+        }
       };
       u.onend = function() {
+        if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+        setCurrentReadingChar(-1, -1);
         currentTime = seg.end;
         updateTimeDisplay();
         updateHighlight();
@@ -1213,6 +1278,8 @@
         }
       };
       u.onerror = function() {
+        if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+        setCurrentReadingChar(-1, -1);
         ttsSentenceIndex++;
         if (ttsSentenceIndex < sentences.length) speakNextSentence();
         else { var btn = document.querySelector("#play-btn"); if (btn) btn.textContent = "▶"; }
@@ -1236,6 +1303,8 @@
       }
       if (window.speechSynthesis && window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
+        if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+        setCurrentReadingChar(-1, -1);
         if (currentStory && currentStory.sentences && ttsSentenceIndex < currentStory.sentences.length) {
           currentTime = currentStory.sentences[ttsSentenceIndex].start;
           updateTimeDisplay();
