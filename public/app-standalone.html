@@ -311,7 +311,7 @@
         voice_show_all: "Alle Stimmen anzeigen (auch andere Sprachen)",
         library_title: "Bibliothek", library_filter: "HSK-Stufe:", library_all: "Alle", library_only_hsk: "Nur HSK ", library_choose: "Wähle eine Geschichte. Klicke auf Zeichen für Übersetzung.",
         library_stories: "Geschichten", library_story: "Geschichte", library_empty: "Keine Geschichten für diese HSK-Stufe. Wähle „Alle“ oder generiere eine neue Geschichte.",
-        counter_label: "In diesem Browser generierte Geschichten (KI):",
+        counter_label: "Weltweit generierte Geschichten (KI):",
         reader_back: "Zurück zur Bibliothek", reader_click_sentence: "Klicke auf einen Satz für Übersetzung und Pinyin.", speed_label: "Geschwindigkeit:",
         popup_save: "Speichern", popup_play: "Abspielen", popup_close: "Schließen", popup_saved: "Bereits gespeichert", popup_saved_ok: "Gespeichert!",
         in_sentence: "Im Satz:", not_found: "Nicht gefunden.",
@@ -345,7 +345,7 @@
         voice_show_all: "Show all voices (including other languages)",
         library_title: "Library", library_filter: "HSK level:", library_all: "All", library_only_hsk: "Only HSK ", library_choose: "Choose a story. Click characters for translation.",
         library_stories: "stories", library_story: "story", library_empty: "No stories for this HSK level. Choose „All“ or generate a new story.",
-        counter_label: "Stories generated in this browser (AI):",
+        counter_label: "Stories generated worldwide (AI):",
         reader_back: "Back to Library", reader_click_sentence: "Click a sentence for translation and pinyin.", speed_label: "Speed:",
         popup_save: "Save", popup_play: "Play", popup_close: "Close", popup_saved: "Already saved", popup_saved_ok: "Saved!",
         in_sentence: "In sentence:", not_found: "Not found.",
@@ -379,7 +379,7 @@
         voice_show_all: "Mostrar todas las voces (también otros idiomas)",
         library_title: "Biblioteca", library_filter: "Nivel HSK:", library_all: "Todas", library_only_hsk: "Solo HSK ", library_choose: "Elige una historia. Haz clic en los caracteres para la traducción.",
         library_stories: "historias", library_story: "historia", library_empty: "No hay historias para este nivel HSK. Elige „Todas“ o genera una nueva.",
-        counter_label: "Historias generadas en este navegador (IA):",
+        counter_label: "Historias generadas en todo el mundo (IA):",
         reader_back: "Volver a la biblioteca", reader_click_sentence: "Haz clic en una oración para ver traducción y pinyin.", speed_label: "Velocidad:",
         popup_save: "Guardar", popup_play: "Reproducir", popup_close: "Cerrar", popup_saved: "Ya guardado", popup_saved_ok: "¡Guardado!",
         in_sentence: "En la oración:", not_found: "No encontrado.",
@@ -392,24 +392,35 @@
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
     function getAudioUnavailableMessage() { return isFileProtocol() ? t("audio_need_server") : t("audio_not_supported"); }
-    var LOCAL_COUNTER_KEY = "kanmandarin_local_story_count";
-    function getLocalStoryCount() {
-      try {
-        var v = parseInt(localStorage.getItem(LOCAL_COUNTER_KEY) || "0", 10);
-        return isNaN(v) ? 0 : v;
-      } catch (e) {
-        return 0;
-      }
+    var GLOBAL_COUNTER_NAMESPACE = "kanmandarin";
+    var GLOBAL_COUNTER_KEY = "stories_generated";
+    function incrementGlobalStoryCount(cb) {
+      fetch("https://api.countapi.xyz/hit/" + GLOBAL_COUNTER_NAMESPACE + "/" + GLOBAL_COUNTER_KEY)
+        .then(function(r) { return r.json(); })
+        .then(function(data) { if (typeof cb === "function") cb(data.value); })
+        .catch(function() { if (typeof cb === "function") cb(null); });
     }
-    function incrementLocalStoryCount() {
-      var v = getLocalStoryCount() + 1;
-      try { localStorage.setItem(LOCAL_COUNTER_KEY, String(v)); } catch (e) {}
-      return v;
+    var globalCounterCreated = false;
+    function fetchGlobalStoryCount(cb) {
+      fetch("https://api.countapi.xyz/get/" + GLOBAL_COUNTER_NAMESPACE + "/" + GLOBAL_COUNTER_KEY)
+        .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function(data) { if (typeof cb === "function") cb(data.value); })
+        .catch(function() {
+          if (!globalCounterCreated) {
+            globalCounterCreated = true;
+            fetch("https://api.countapi.xyz/create?namespace=" + GLOBAL_COUNTER_NAMESPACE + "&key=" + GLOBAL_COUNTER_KEY + "&value=0")
+              .then(function() { fetchGlobalStoryCount(cb); })
+              .catch(function() { if (typeof cb === "function") cb(null); });
+          } else if (typeof cb === "function") cb(null);
+        });
     }
     function updateGlobalCounterDisplay() {
       var el = document.getElementById("global-story-counter");
       if (!el) return;
-      el.textContent = String(getLocalStoryCount());
+      el.textContent = "…";
+      fetchGlobalStoryCount(function(val) {
+        el.textContent = val != null ? String(val) : "—";
+      });
     }
     function t(key) {
       var lang = getUILang();
@@ -751,9 +762,10 @@
       saved.push(story);
       saveGeneratedStories(saved);
       setNewStoryStatus(t("status_created"), false);
-      var newVal = incrementLocalStoryCount();
-      var elCounter = document.getElementById("global-story-counter");
-      if (elCounter) elCounter.textContent = String(newVal);
+      incrementGlobalStoryCount(function(newVal) {
+        var el = document.getElementById("global-story-counter");
+        if (el) el.textContent = newVal != null ? String(newVal) : "—";
+      });
       if (input) input.value = "";
       showScreen("library");
       setTimeout(function() { openStory(newId); }, 300);
