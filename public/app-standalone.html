@@ -516,7 +516,7 @@
       }
       return false;
     }
-    function saveWord(entry, exampleSentence, exampleTranslation, contextPinyin) {
+    function saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin) {
       if (isWordSaved(entry.word)) return;
       var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "");
       var english = (entry.meaning && entry.meaning !== "Nicht gefunden.") ? entry.meaning : ("Siehe Beispielsatz: " + (exampleTranslation || ""));
@@ -526,6 +526,7 @@
         pinyin: pinyin,
         english: english,
         example_sentence: exampleSentence || "",
+        example_sentence_pinyin: exampleSentencePinyin || "",
         example_translation: exampleTranslation || ""
       });
       setSavedWords(list);
@@ -547,7 +548,7 @@
     }
     function downloadSavedWordsCSV() {
       var list = getSavedWords();
-      var header = "character,pinyin,english,example_sentence,example_translation";
+      var header = "character,pinyin,english,example_sentence,example_sentence_pinyin,example_translation";
       var rows = [header];
       for (var i = 0; i < list.length; i++) {
         var r = list[i];
@@ -561,6 +562,7 @@
           csvEscape(r.pinyin),
           csvEscape(r.english),
           csvEscape(exampleSentence),
+          csvEscape(r.example_sentence_pinyin != null ? r.example_sentence_pinyin : ""),
           csvEscape(r.example_translation)
         ].join(","));
       }
@@ -1170,6 +1172,7 @@
                 if (seg) {
                   exampleSentence = seg.text || "";
                   exampleTranslation = getSentenceTranslation(seg) || "";
+                  var exampleSentencePinyin = seg.pinyin || "";
                   var tokens = segmentText(seg.text, seg.pinyin);
                   var charsDiv = span.parentElement;
                   var idx = charsDiv ? Array.prototype.indexOf.call(charsDiv.children, span) : -1;
@@ -1177,7 +1180,7 @@
                 }
               }
             }
-            showPopup(entry, e.clientX, e.clientY, exampleSentence, exampleTranslation, contextPinyin);
+            showPopup(entry, e.clientX, e.clientY, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin);
           };
         })(charSpans[k]);
       }
@@ -1349,10 +1352,11 @@
       speakNextSentence();
     }
 
-    function showPopup(entry, x, y, exampleSentence, exampleTranslation, contextPinyin) {
+    function showPopup(entry, x, y, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin) {
       exampleSentence = exampleSentence || "";
       exampleTranslation = exampleTranslation || "";
       contextPinyin = contextPinyin || "";
+      exampleSentencePinyin = exampleSentencePinyin || "";
       var popup = document.getElementById("popup");
       var wordEsc = (entry.word || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
       var pinyinShow = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "?");
@@ -1383,7 +1387,7 @@
       var saveBtn = document.getElementById("popup-save");
       if (saveBtn) {
         saveBtn.onclick = function() {
-          saveWord(entry, exampleSentence, exampleTranslation, contextPinyin);
+          saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin);
           var msg = document.getElementById("popup-saved-msg");
           if (msg) { msg.style.display = "block"; }
         };
