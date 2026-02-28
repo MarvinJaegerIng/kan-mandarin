@@ -551,11 +551,16 @@
       var rows = [header];
       for (var i = 0; i < list.length; i++) {
         var r = list[i];
+        var exampleSentence = r.example_sentence || "";
+        var word = r.character || "";
+        if (word && exampleSentence.indexOf(word) !== -1) {
+          exampleSentence = exampleSentence.replace(word, "**" + word + "**");
+        }
         rows.push([
           csvEscape(r.character),
           csvEscape(r.pinyin),
           csvEscape(r.english),
-          csvEscape(r.example_sentence),
+          csvEscape(exampleSentence),
           csvEscape(r.example_translation)
         ].join(","));
       }
