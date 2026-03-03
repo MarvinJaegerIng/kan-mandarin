@@ -516,20 +516,7 @@
       }
       return false;
     }
-    function fetchTTSAsBase64(text, cb) {
-      if (!(text && text.trim())) { cb(""); return; }
-      var t = String(text).trim().substring(0, 200);
-      var url = "https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=" + encodeURIComponent(t);
-      var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
-      fetch(proxy).then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
-        if (!buf || buf.byteLength < 100) { cb(""); return; }
-        var binary = "";
-        var bytes = new Uint8Array(buf);
-        for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        cb(btoa(binary));
-      }).catch(function() { cb(""); });
-    }
-    function saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin, audioWordBase64, audioSentenceBase64) {
+    function saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin) {
       if (isWordSaved(entry.word)) return;
       var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "");
       var english = (entry.meaning && entry.meaning !== "Nicht gefunden.") ? entry.meaning : ("Siehe Beispielsatz: " + (exampleTranslation || ""));
@@ -540,9 +527,7 @@
         english: english,
         example_sentence: exampleSentence || "",
         example_sentence_pinyin: exampleSentencePinyin || "",
-        example_translation: exampleTranslation || "",
-        audio_word: audioWordBase64 || "",
-        audio_sentence: audioSentenceBase64 || ""
+        example_translation: exampleTranslation || ""
       });
       setSavedWords(list);
     }
@@ -563,7 +548,7 @@
     }
     function downloadSavedWordsCSV() {
       var list = getSavedWords();
-      var header = "character,pinyin,english,example_sentence,example_sentence_pinyin,example_translation,audio_word,audio_sentence";
+      var header = "character,pinyin,english,example_sentence,example_sentence_pinyin,example_translation";
       var rows = [header];
       for (var i = 0; i < list.length; i++) {
         var r = list[i];
@@ -578,9 +563,7 @@
           csvEscape(r.english),
           csvEscape(exampleSentence),
           csvEscape(r.example_sentence_pinyin != null ? r.example_sentence_pinyin : ""),
-          csvEscape(r.example_translation),
-          csvEscape(r.audio_word != null ? r.audio_word : ""),
-          csvEscape(r.audio_sentence != null ? r.audio_sentence : "")
+          csvEscape(r.example_translation)
         ].join(","));
       }
       var csv = rows.join("\n");
@@ -1404,25 +1387,9 @@
       var saveBtn = document.getElementById("popup-save");
       if (saveBtn) {
         saveBtn.onclick = function() {
-          if (isWordSaved(entry.word)) return;
-          var btn = saveBtn;
-          btn.disabled = true;
-          btn.textContent = "⏳ …";
-          var wordAudio = "";
-          var sentenceAudio = "";
-          var done = 0;
-          function check() {
-            done++;
-            if (done === 2) {
-              saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin, wordAudio, sentenceAudio);
-              btn.disabled = false;
-              btn.textContent = "💾 " + t("popup_save");
-              var msg = document.getElementById("popup-saved-msg");
-              if (msg) msg.style.display = "block";
-            }
-          }
-          fetchTTSAsBase64(entry.word || "", function(b64) { wordAudio = b64; check(); });
-          fetchTTSAsBase64(exampleSentence || "", function(b64) { sentenceAudio = b64; check(); });
+          saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin);
+          var msg = document.getElementById("popup-saved-msg");
+          if (msg) { msg.style.display = "block"; }
         };
       }
       var playBtn = document.getElementById("popup-play");
