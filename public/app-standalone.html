@@ -42,8 +42,8 @@
     .sentence:hover { background: rgba(0,0,0,0.03); }
     .sentence.highlight { background: rgba(37, 99, 235, 0.08); outline: 1px solid rgba(37, 99, 235, 0.2); }
     .sentence.selected { background: rgba(37, 99, 235, 0.12); outline: 1px solid rgba(37, 99, 235, 0.3); }
-    .sentence .chars { font-size: 1.5rem; line-height: 1.6; }
-    .sentence .chars span.char { cursor: pointer; padding: 2px 4px; border-radius: 4px; color: #1a1a1a; transition: color 0.1s ease; }
+    .sentence .chars { font-size: 1.5rem; line-height: 1.8; }
+    .sentence .chars span.char { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 1.15em; min-width: 1.15em; padding: 2px 0; border-radius: 4px; color: #1a1a1a; transition: color 0.1s ease; }
     .sentence .chars span.char:hover { background: rgba(37, 99, 235, 0.15); }
     .sentence .chars span.char.char-reading { color: #2563eb; font-weight: 600; }
     .audio-bar { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; }
@@ -96,7 +96,7 @@
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar hidden" id="sidebar">
       <a href="#" class="nav-link active" data-screen="library">📚 <span data-i18n="nav_library">Bibliothek</span></a>
       <a href="#" class="nav-link" data-screen="favorites">❤️ <span data-i18n="nav_favorites">Favoriten</span></a>
       <a href="#" class="nav-link" data-screen="saved">💾 <span data-i18n="nav_saved">Gespeicherte Wörter</span></a>
@@ -203,7 +203,6 @@
       </div>
     </div>
   </div>
-  <div id="popup" class="popup" style="display: none;"></div>
 
   <script src="hsk-dict.js"></script>
   <script>
@@ -301,7 +300,7 @@
         settings_voice: "Stimme für Vorlesen (Audio)", settings_voice_desc: "Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.",
         help_title: "Hilfe", help_intro: "So nutzt du die App (auch für andere Nutzer, die die Seite im Internet öffnen):",
         help_library: "Bibliothek – Auf der Startseite (Library) eine Geschichte auswählen und anklicken.",
-        help_reader: "Leser – Auf einen Satz klicken: Übersetzung und Pinyin erscheinen. Auf ein Zeichen klicken: Bedeutung, Pinyin und Lautsprecher im Popup.",
+        help_reader: "Leser – Auf einen Satz klicken: Übersetzung und Pinyin erscheinen. Zeichen gedrückt halten: Wortbedeutung oben anzeigen.",
         help_audio: "Audio – Play-/Pause-Button und Geschwindigkeit unten. Stimme hier unter „Stimme für Vorlesen“ wählen.",
         help_data: "Alles läuft im Browser. Es werden keine Daten an einen Server geschickt.",
         help_links_title: "API-Schlüssel bekommen:",
@@ -335,7 +334,7 @@
         settings_voice: "Voice for reading (audio)", settings_voice_desc: "Chinese voices on your system. Click „Sample“ for a short preview.",
         help_title: "Help", help_intro: "How to use the app (for you and others who open the site on the internet):",
         help_library: "Library – On the start page (Library), choose a story and click it.",
-        help_reader: "Reader – Click a sentence to see translation and pinyin. Click a character for meaning, pinyin and speaker in the popup.",
+        help_reader: "Reader – Click a sentence to see translation and pinyin. Press and hold a character to show word details at the top.",
         help_audio: "Audio – Play/pause and speed at the bottom. Choose voice under „Voice for reading“ below.",
         help_data: "Everything runs in the browser. No data is sent to any server.",
         help_links_title: "Get API keys:",
@@ -369,7 +368,7 @@
         settings_voice: "Voz para leer (audio)", settings_voice_desc: "Voces chinas de tu sistema. Haz clic en „Muestra“ para una vista previa.",
         help_title: "Ayuda", help_intro: "Cómo usar la app (para ti y para otros que abran la página en internet):",
         help_library: "Biblioteca – En la página de inicio (Library), elige una historia y haz clic.",
-        help_reader: "Lector – Haz clic en una oración para ver traducción y pinyin. Haz clic en un carácter para significado, pinyin y altavoz en el popup.",
+        help_reader: "Lector – Haz clic en una oración para ver traducción y pinyin. Mantén pulsado un carácter para mostrar arriba el significado.",
         help_audio: "Audio – Reproducir/pausa y velocidad abajo. Elige voz en „Voz para leer“ más abajo.",
         help_data: "Todo funciona en el navegador. No se envían datos a ningún servidor.",
         help_links_title: "Obtener claves API:",
@@ -494,7 +493,19 @@
       if (DICT[word]) return DICT[word];
       var gen = getGeneratedVocabulary()[word];
       if (gen) return gen;
-      return { word: word, pinyin: "?", meaning: "Nicht gefunden.", hsk: null };
+      return { word: word, pinyin: "?", meaning: t("not_found"), hsk: null };
+    }
+
+    function getEntryMeaning(entry) {
+      if (!entry) return t("not_found");
+      var lang = getTargetLang();
+      var key = "meaning_" + lang;
+      if (entry[key] != null && entry[key] !== "") return entry[key];
+      return entry.meaning || t("not_found");
+    }
+
+    function isNotFoundMeaning(meaning) {
+      return !meaning || meaning === t("not_found") || meaning === "Nicht gefunden." || meaning === "Not found." || meaning === "No encontrado.";
     }
 
     var SAVED_WORDS_KEY = "kanmandarin_saved_words";
@@ -519,7 +530,7 @@
     function saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin) {
       if (isWordSaved(entry.word)) return;
       var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "");
-      var english = (entry.meaning && entry.meaning !== "Nicht gefunden.") ? entry.meaning : ("Siehe Beispielsatz: " + (exampleTranslation || ""));
+      var english = !isNotFoundMeaning(entry.meaning) ? entry.meaning : ("Siehe Beispielsatz: " + (exampleTranslation || ""));
       var list = getSavedWords();
       list.push({
         character: entry.word,
@@ -555,7 +566,7 @@
         var exampleSentence = r.example_sentence || "";
         var word = r.character || "";
         if (word && exampleSentence.indexOf(word) !== -1) {
-          exampleSentence = exampleSentence.replace(word, "**" + word + "**");
+          exampleSentence = exampleSentence.replace(word, "<span class=\"vocab-word\" style=\"color:#2563eb\">" + word + "</span>");
         }
         rows.push([
           csvEscape(r.character),
@@ -899,10 +910,10 @@
           var ce = (r.character || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
           var pe = (r.pinyin || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
           var ee = (r.english || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
-          var se = (r.example_sentence || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+          var se = (r.example_sentence || "").replace(/\*\*([^*]*)\*\*/g, "$1").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
           var te = (r.example_translation || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
           var mainLine = ee;
-          if (ee === "Nicht gefunden." && (se || te)) mainLine = t("in_sentence") + " " + te;
+          if (isNotFoundMeaning(ee) && (se || te)) mainLine = t("in_sentence") + " " + te;
           else if (ee.indexOf("Siehe Beispielsatz") === 0) mainLine = ee;
           html += "<li style=\"padding:8px 0;border-bottom:1px solid #eee;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px\">" +
             "<span style=\"flex:1;min-width:0\"><strong>" + ce + "</strong> " + pe + " — " + mainLine + "<br><span class=\"muted\" style=\"font-size:0.85rem\">" + se + (te ? " / " + te : "") + "</span></span>" +
@@ -997,6 +1008,7 @@
 
     var currentStory = null;
     var selectedSentenceIndex = null;
+    var pressedWordState = null;
     var currentTime = 0;
     var duration = 0;
     var currentSegmentIndex = null;
@@ -1004,6 +1016,7 @@
     var audioEl = null;
     var ttsSentenceIndex = 0;
     var readingCharInterval = null;
+    var pressedWordGlobalHandlersBound = false;
     var playbackSpeed = (function() {
       try {
         var s = localStorage.getItem("kanmandarin_playback_speed");
@@ -1046,6 +1059,18 @@
     function updateSelectedSentenceBox() {
       var box = document.getElementById("selected-sentence-box");
       if (!box) return;
+
+      if (pressedWordState && pressedWordState.entry) {
+        var entry = pressedWordState.entry;
+        var wordEsc = (entry.word || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+        var pinyinShow = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (pressedWordState.contextPinyin || "?");
+        var pinyinEsc = pinyinShow.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        var meaningEsc = (getEntryMeaning(entry) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+        box.className = "selected-sentence-box";
+        box.innerHTML = '<div class="translation-top"><strong>' + wordEsc + '</strong> <span style="font-weight:400;color:#555">' + pinyinEsc + '</span></div><div class="pinyin-top">' + meaningEsc + '</div>';
+        return;
+      }
+
       if (selectedSentenceIndex == null || !currentStory || !currentStory.sentences[selectedSentenceIndex]) {
         box.innerHTML = '<span class="empty">' + t("reader_click_sentence") + '</span>';
         box.className = "selected-sentence-box empty";
@@ -1059,6 +1084,7 @@
     }
 
     function renderReader() {
+      pressedWordState = null;
       if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
       var readerScreen = document.getElementById("screen-reader");
       if (!readerScreen) return;
@@ -1076,9 +1102,14 @@
         var highlight = currentSegmentIndex === idx ? " highlight" : "";
         var selected = selectedSentenceIndex === idx ? " selected" : "";
         var charsLine = "";
+        var charCursor = 0;
         for (var j = 0; j < tokens.length; j++) {
-          var c = tokens[j].char;
-          charsLine += '<span class="char" data-char="' + c.replace(/"/g, "&quot;") + '">' + c + '</span>';
+          var tokenWord = tokens[j].char || "";
+          for (var sub = 0; sub < tokenWord.length; sub++) {
+            var c = tokenWord[sub];
+            charsLine += '<span class="char" data-char="' + c.replace(/"/g, "&quot;") + '" data-char-index="' + charCursor + '">' + c + '</span>';
+            charCursor += 1;
+          }
         }
         sentencesHtml += '<div class="sentence' + highlight + selected + '" data-segment-index="' + idx + '">' +
           '<div class="chars">' + charsLine + '</div></div>';
@@ -1148,6 +1179,7 @@
           div.onclick = function(e) {
             if (e.target.classList && e.target.classList.contains("char")) return;
             selectedSentenceIndex = idx;
+            pressedWordState = null;
             readerScreen.querySelectorAll(".sentence").forEach(function(el) { el.classList.remove("selected"); });
             div.classList.add("selected");
             updateSelectedSentenceBox();
@@ -1157,34 +1189,84 @@
       var charSpans = readerScreen.querySelectorAll(".char");
       for (var k = 0; k < charSpans.length; k++) {
         (function(span) {
-          span.onclick = function(e) {
+          var release = function() { clearPressedWord(); };
+          var handlePressStart = function(e) {
             e.stopPropagation();
-            var ch = span.getAttribute("data-char");
-            var entry = lookup(ch);
-            var exampleSentence = "";
-            var exampleTranslation = "";
-            var contextPinyin = "";
+            e.preventDefault();
             var sentenceEl = span.closest && span.closest(".sentence");
-            if (sentenceEl && currentStory && currentStory.sentences) {
-              var segIdx = sentenceEl.getAttribute("data-segment-index");
-              if (segIdx !== null && segIdx !== "") {
-                var seg = currentStory.sentences[parseInt(segIdx, 10)];
-                if (seg) {
-                  exampleSentence = seg.text || "";
-                  exampleTranslation = getSentenceTranslation(seg) || "";
-                  var exampleSentencePinyin = seg.pinyin || "";
-                  var tokens = segmentText(seg.text, seg.pinyin);
-                  var charsDiv = span.parentElement;
-                  var idx = charsDiv ? Array.prototype.indexOf.call(charsDiv.children, span) : -1;
-                  if (idx >= 0 && tokens[idx]) contextPinyin = tokens[idx].py || "";
-                }
+            if (!sentenceEl || !currentStory || !currentStory.sentences) return;
+            var segIdx = sentenceEl.getAttribute("data-segment-index");
+            if (segIdx == null || segIdx === "") return;
+            var seg = currentStory.sentences[parseInt(segIdx, 10)];
+            if (!seg || !seg.text) return;
+
+            var charIdx = parseInt(span.getAttribute("data-char-index"), 10);
+            if (isNaN(charIdx)) return;
+            var found = findWordAtIndex(seg.text, charIdx);
+            if (!found || !found.word) return;
+
+            var contextPinyin = "";
+            var tokens = segmentText(seg.text, seg.pinyin);
+            var consumed = 0;
+            for (var ti = 0; ti < tokens.length; ti++) {
+              var tw = tokens[ti].char || "";
+              var tStart = consumed;
+              var tEnd = consumed + tw.length;
+              if (found.start >= tStart && found.start < tEnd) {
+                contextPinyin = tokens[ti].py || "";
+                break;
               }
+              consumed = tEnd;
             }
-            showPopup(entry, e.clientX, e.clientY, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin);
+
+            var entry = lookup(found.word);
+            setPressedWord(entry, contextPinyin);
           };
+
+          span.addEventListener("mousedown", handlePressStart);
+          span.addEventListener("touchstart", handlePressStart, { passive: false });
+          span.addEventListener("mouseup", release);
+          span.addEventListener("mouseleave", release);
+          span.addEventListener("touchend", release);
+          span.addEventListener("touchcancel", release);
+          span.addEventListener("contextmenu", function(e) { e.preventDefault(); });
         })(charSpans[k]);
       }
+      if (!pressedWordGlobalHandlersBound) {
+        document.addEventListener("mouseup", clearPressedWord);
+        document.addEventListener("touchend", clearPressedWord);
+        pressedWordGlobalHandlersBound = true;
+      }
       updateTimeDisplay();
+      updateSelectedSentenceBox();
+    }
+
+    function findWordAtIndex(text, index) {
+      if (!text || index < 0 || index >= text.length) return null;
+      var best = null;
+      var startMin = Math.max(0, index - 5);
+      for (var start = startMin; start <= index; start++) {
+        var maxLen = Math.min(6, text.length - start);
+        for (var len = maxLen; len >= 1; len--) {
+          var end = start + len;
+          if (index < start || index >= end) continue;
+          var candidate = text.slice(start, end);
+          if (!inDict(candidate)) continue;
+          if (!best || candidate.length > best.word.length) best = { word: candidate, start: start, end: end };
+        }
+      }
+      if (best) return best;
+      return { word: text[index], start: index, end: index + 1 };
+    }
+
+    function setPressedWord(entry, contextPinyin) {
+      pressedWordState = { entry: entry, contextPinyin: contextPinyin || "" };
+      updateSelectedSentenceBox();
+    }
+
+    function clearPressedWord() {
+      if (!pressedWordState) return;
+      pressedWordState = null;
       updateSelectedSentenceBox();
     }
 
@@ -1257,18 +1339,19 @@
         var numChars = textToSpeak.length;
         if (numChars > 0) {
           var startWall = Date.now();
-          var segDuration = Math.max(0.001, seg.end - seg.start);
+          var rate = Math.max(0.1, Math.min(4, playbackSpeed));
+          var estimatedDuration = (numChars * 0.22) / rate;
           readingCharInterval = setInterval(function() {
             var elapsed = (Date.now() - startWall) / 1000;
-            if (elapsed >= segDuration) {
+            if (elapsed >= estimatedDuration) {
               clearInterval(readingCharInterval);
               readingCharInterval = null;
               setCurrentReadingChar(-1, -1);
               return;
             }
-            var charIndex = Math.min(Math.floor((elapsed / segDuration) * numChars), numChars - 1);
+            var charIndex = Math.min(Math.floor((elapsed / estimatedDuration) * numChars), numChars - 1);
             setCurrentReadingChar(ttsSentenceIndex, charIndex);
-          }, 80);
+          }, 50);
         }
       };
       u.onend = function() {
@@ -1352,73 +1435,6 @@
       speakNextSentence();
     }
 
-    function showPopup(entry, x, y, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin) {
-      exampleSentence = exampleSentence || "";
-      exampleTranslation = exampleTranslation || "";
-      contextPinyin = contextPinyin || "";
-      exampleSentencePinyin = exampleSentencePinyin || "";
-      var popup = document.getElementById("popup");
-      var wordEsc = (entry.word || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-      var pinyinShow = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (contextPinyin || "?");
-      var pinyinEsc = pinyinShow.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-      var notFound = entry.meaning === "Nicht gefunden.";
-      var meaningDisplay = notFound ? t("not_found") : (entry.meaning || "");
-      var meaningEsc = (meaningDisplay || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-      var exampleLine = (notFound && (exampleSentence || exampleTranslation))
-        ? "<div class=\"meaning\" style=\"margin-top:6px;font-size:0.9rem;color:#555\">" + t("in_sentence") + " " + (exampleSentence || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;") + " — " + (exampleTranslation || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;") + "</div>"
-        : "";
-      var alreadySaved = isWordSaved(entry.word);
-      var saveHtml = alreadySaved
-        ? "<span class=\"saved-msg\" style=\"display:inline\">" + t("popup_saved") + "</span>"
-        : "<button type=\"button\" id=\"popup-save\">💾 " + t("popup_save") + "</button>";
-      popup.innerHTML =
-        "<div><span class=\"word\">" + wordEsc + "</span><span class=\"pinyin\">" + pinyinEsc + "</span></div>" +
-        "<div class=\"meaning\">" + meaningEsc + "</div>" +
-        exampleLine +
-        (entry.hsk ? "<span class=\"hsk\">HSK " + entry.hsk + "</span>" : "") +
-        "<div class=\"actions\">" +
-          saveHtml +
-          "<button type=\"button\" id=\"popup-play\">🔊 " + t("popup_play") + "</button>" +
-          "<button type=\"button\" id=\"popup-close\">" + t("popup_close") + "</button>" +
-        "</div>" +
-        "<div id=\"popup-saved-msg\" class=\"saved-msg\" style=\"display:none\">" + t("popup_saved_ok") + "</div>";
-      popup.style.display = "block";
-
-      var saveBtn = document.getElementById("popup-save");
-      if (saveBtn) {
-        saveBtn.onclick = function() {
-          saveWord(entry, exampleSentence, exampleTranslation, contextPinyin, exampleSentencePinyin);
-          var msg = document.getElementById("popup-saved-msg");
-          if (msg) { msg.style.display = "block"; }
-        };
-      }
-      var playBtn = document.getElementById("popup-play");
-      if (playBtn) {
-        playBtn.onclick = function() {
-          if (!window.speechSynthesis) {
-            alert(getAudioUnavailableMessage());
-            return;
-          }
-          var word = (entry.word || "").trim();
-          if (!word) return;
-          if (window.speechSynthesis.resume) window.speechSynthesis.resume();
-          var u = new SpeechSynthesisUtterance(word);
-          u.lang = "zh-CN";
-          u.volume = 1;
-          var voice = getSelectedVoice();
-          if (voice) u.voice = voice;
-          window.speechSynthesis.speak(u);
-        };
-      }
-      var closeBtn = document.getElementById("popup-close");
-      if (closeBtn) closeBtn.onclick = function() { popup.style.display = "none"; };
-    }
-
-    document.addEventListener("mousedown", (e) => {
-      const p = document.getElementById("popup");
-      if (p && p.style.display === "block" && !p.contains(e.target)) p.style.display = "none";
-    });
-
     function showScreen(screenId) {
       currentStory = null;
       selectedSentenceIndex = null;
@@ -1438,6 +1454,7 @@
       link.addEventListener("click", function(e) {
         e.preventDefault();
         showScreen(link.getAttribute("data-screen"));
+        document.getElementById("sidebar").classList.add("hidden");
       });
     });
 
