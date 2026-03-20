@@ -46,6 +46,7 @@
     .sentence .chars span.char { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 1.15em; min-width: 1.15em; padding: 2px 0; border-radius: 4px; color: #1a1a1a; transition: color 0.1s ease; }
     .sentence .chars span.char:hover { background: rgba(37, 99, 235, 0.15); }
     .sentence .chars span.char.char-reading { color: #2563eb; font-weight: 600; }
+    .sentence .chars span.char.char-pressed { background: rgba(37, 99, 235, 0.22); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25); }
     .audio-bar { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; }
     .audio-bar .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .audio-bar button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #e5e5e5; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -1220,7 +1221,7 @@
             }
 
             var entry = lookup(found.word);
-            setPressedWord(entry, contextPinyin);
+            setPressedWord(entry, contextPinyin, parseInt(segIdx, 10), found.start, found.end);
           };
 
           span.addEventListener("mousedown", handlePressStart);
@@ -1239,6 +1240,7 @@
       }
       updateTimeDisplay();
       updateSelectedSentenceBox();
+      updatePressedWordHighlight();
     }
 
     function findWordAtIndex(text, index) {
@@ -1259,15 +1261,23 @@
       return { word: text[index], start: index, end: index + 1 };
     }
 
-    function setPressedWord(entry, contextPinyin) {
-      pressedWordState = { entry: entry, contextPinyin: contextPinyin || "" };
+    function setPressedWord(entry, contextPinyin, segmentIndex, startCharIndex, endCharIndex) {
+      pressedWordState = {
+        entry: entry,
+        contextPinyin: contextPinyin || "",
+        segmentIndex: segmentIndex,
+        startCharIndex: startCharIndex,
+        endCharIndex: endCharIndex
+      };
       updateSelectedSentenceBox();
+      updatePressedWordHighlight();
     }
 
     function clearPressedWord() {
       if (!pressedWordState) return;
       pressedWordState = null;
       updateSelectedSentenceBox();
+      updatePressedWordHighlight();
     }
 
     function updateHighlight() {
@@ -1293,6 +1303,21 @@
       if (!sentence) return;
       var chars = sentence.querySelectorAll(".chars .char");
       if (chars[charIndex]) chars[charIndex].classList.add("char-reading");
+    }
+
+    function updatePressedWordHighlight() {
+      var container = document.getElementById("reader-sentences");
+      if (!container) return;
+      container.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
+      if (!pressedWordState || pressedWordState.segmentIndex == null) return;
+      var sentence = container.querySelector('.sentence[data-segment-index="' + pressedWordState.segmentIndex + '"]');
+      if (!sentence) return;
+      var chars = sentence.querySelectorAll(".chars .char");
+      var start = Math.max(0, pressedWordState.startCharIndex || 0);
+      var end = Math.max(start, pressedWordState.endCharIndex || start);
+      for (var i = start; i < end && i < chars.length; i++) {
+        chars[i].classList.add("char-pressed");
+      }
     }
 
     function updateTimeDisplay() {
