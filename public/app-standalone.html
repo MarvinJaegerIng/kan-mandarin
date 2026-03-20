@@ -24,6 +24,9 @@
     .story-card:hover { background: #f5f5f5; }
     .story-card .icon { width: 80px; height: 80px; background: #eee; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; flex-shrink: 0; }
     .story-card h2 { margin: 0; font-size: 1.1rem; }
+    .story-card .story-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .btn-delete-story { border: none; background: #fee2e2; color: #991b1b; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
+    .btn-delete-story:hover { background: #fecaca; }
     .story-card .pinyin { font-size: 0.9rem; color: #666; margin-top: 4px; }
     .story-card .en { font-size: 0.85rem; color: #666; margin-top: 2px; }
     .badge { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 4px; background: #e5e5e5; font-size: 0.75rem; font-weight: 500; }
@@ -276,6 +279,22 @@
         localStorage.setItem(GENERATED_STORIES_KEY, JSON.stringify(list));
       } catch (e) {}
     }
+    function isGeneratedStoryId(id) {
+      var list = getGeneratedStories();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && list[i].id === id) return true;
+      }
+      return false;
+    }
+    function deleteStoryById(id) {
+      if (!id) return false;
+      var generated = getGeneratedStories();
+      var nextGenerated = generated.filter(function(s) { return s && s.id !== id; });
+      if (nextGenerated.length === generated.length) return false;
+      saveGeneratedStories(nextGenerated);
+      STORIES = INITIAL_STORIES.concat(nextGenerated);
+      return true;
+    }
     var STORIES = INITIAL_STORIES.concat(getGeneratedStories());
 
     var UI_LANG_KEY = "kanmandarin_ui_lang";
@@ -314,6 +333,7 @@
         counter_label: "Weltweit generierte Geschichten (KI):",
         reader_back: "Zurück zur Bibliothek", reader_click_sentence: "Klicke auf einen Satz für Übersetzung und Pinyin.", speed_label: "Geschwindigkeit:",
         popup_save: "Speichern", popup_play: "Abspielen", popup_close: "Schließen", popup_saved: "Bereits gespeichert", popup_saved_ok: "Gespeichert!",
+        delete_story: "Löschen", delete_story_confirm: "Diese Geschichte wirklich löschen?",
         in_sentence: "Im Satz:", not_found: "Nicht gefunden.",
         status_enter_desc: "Bitte zuerst eine Beschreibung auf Englisch eingeben.", status_api_key: "Bitte in Einstellungen einen ", status_api_key_suffix: " API-Schlüssel eintragen.",
         status_generating: "Generiere Geschichte …", status_created: "Geschichte wurde erstellt und zur Bibliothek hinzugefügt.", status_error: "Fehler bei der Generierung.",
@@ -348,6 +368,7 @@
         counter_label: "Stories generated worldwide (AI):",
         reader_back: "Back to Library", reader_click_sentence: "Click a sentence for translation and pinyin.", speed_label: "Speed:",
         popup_save: "Save", popup_play: "Play", popup_close: "Close", popup_saved: "Already saved", popup_saved_ok: "Saved!",
+        delete_story: "Delete", delete_story_confirm: "Delete this story permanently?",
         in_sentence: "In sentence:", not_found: "Not found.",
         status_enter_desc: "Please enter a description in English first.", status_api_key: "Please enter a ", status_api_key_suffix: " API key in Settings.",
         status_generating: "Generating story …", status_created: "Story was created and added to the library.", status_error: "Error generating story.",
@@ -382,6 +403,7 @@
         counter_label: "Historias generadas en todo el mundo (IA):",
         reader_back: "Volver a la biblioteca", reader_click_sentence: "Haz clic en una oración para ver traducción y pinyin.", speed_label: "Velocidad:",
         popup_save: "Guardar", popup_play: "Reproducir", popup_close: "Cerrar", popup_saved: "Ya guardado", popup_saved_ok: "¡Guardado!",
+        delete_story: "Eliminar", delete_story_confirm: "¿Eliminar esta historia permanentemente?",
         in_sentence: "En la oración:", not_found: "No encontrado.",
         status_enter_desc: "Introduce primero una descripción en inglés.", status_api_key: "Introduce una clave API de ", status_api_key_suffix: " en Ajustes.",
         status_generating: "Generando historia …", status_created: "La historia se creó y se añadió a la biblioteca.", status_error: "Error al generar la historia.",
@@ -958,9 +980,12 @@
         '<p class="muted" style="margin-bottom: 24px;">' + t("library_choose") + '</p>';
       for (var i = 0; i < filtered.length; i++) {
         var s = filtered[i];
+        var deleteBtn = isGeneratedStoryId(s.id)
+          ? '<button type="button" class="btn-delete-story" data-delete-story-id="' + escapeHtml(s.id) + '">🗑 ' + t("delete_story") + '</button>'
+          : "";
         html += '<a href="#" class="story-card" data-story-id="' + escapeHtml(s.id) + '">' +
           '<div class="icon">📖</div><div>' +
-          '<h2>' + escapeHtml(s.title) + '</h2>' +
+          '<div class="story-head"><h2>' + escapeHtml(s.title) + '</h2>' + deleteBtn + '</div>' +
           '<div class="pinyin">' + escapeHtml(s.titlePinyin || "") + '</div>' +
           '<div class="en">' + escapeHtml(getStoryTitleTranslation(s) || "") + '</div>' +
           '<span class="badge">HSK ' + (s.difficulty || 1) + '</span></div></a>';
@@ -976,6 +1001,16 @@
           renderLibrary();
         };
       }
+      el.querySelectorAll(".btn-delete-story").forEach(function(btn) {
+        btn.addEventListener("click", function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var id = btn.getAttribute("data-delete-story-id");
+          if (!id) return;
+          if (!confirm(t("delete_story_confirm"))) return;
+          if (deleteStoryById(id)) renderLibrary();
+        });
+      });
       el.querySelectorAll(".story-card").forEach(function(card) {
         card.addEventListener("click", function(e) {
           e.preventDefault();
@@ -1119,6 +1154,9 @@
       var title = (currentStory.title || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
       var titlePinyin = (currentStory.titlePinyin || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
       var titleEn = (getStoryTitleTranslation(currentStory) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      var readerDeleteBtn = isGeneratedStoryId(currentStory.id)
+        ? '<button type="button" id="reader-delete-story" class="btn-delete-story" style="margin-top:10px">🗑 ' + t("delete_story") + '</button>'
+        : "";
 
       readerScreen.innerHTML =
         '<a href="#" class="back" id="back-to-library">← ' + t("reader_back") + '</a>' +
@@ -1127,6 +1165,7 @@
           '<div class="pinyin">' + titlePinyin + '</div>' +
           '<div class="en">' + titleEn + '</div>' +
           '<span class="badge">HSK ' + (currentStory.difficulty || 1) + '</span>' +
+          readerDeleteBtn +
         '</div>' +
         '<div id="selected-sentence-box" class="selected-sentence-box empty">' + t("reader_click_sentence") + '</div>' +
         '<div id="reader-sentences">' + sentencesHtml + '</div>' +
@@ -1153,6 +1192,13 @@
 
       var backBtn = readerScreen.querySelector("#back-to-library");
       if (backBtn) backBtn.onclick = function(e) { e.preventDefault(); showScreen("library"); };
+      var deleteBtn = readerScreen.querySelector("#reader-delete-story");
+      if (deleteBtn) deleteBtn.onclick = function(e) {
+        e.preventDefault();
+        if (!currentStory || !currentStory.id) return;
+        if (!confirm(t("delete_story_confirm"))) return;
+        if (deleteStoryById(currentStory.id)) showScreen("library");
+      };
       var playBtn = readerScreen.querySelector("#play-btn");
       if (playBtn) playBtn.onclick = togglePlay;
       var seekEl = readerScreen.querySelector("#seek");
