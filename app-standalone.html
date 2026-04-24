@@ -96,6 +96,29 @@
     .voice-sample-btn:hover { background: #d0d0d0; }
     .help-section .link { color: #2563eb; text-decoration: none; }
     .help-section .link:hover { text-decoration: underline; }
+    .number-trainer { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 8px 0; }
+    .number-trainer .nt-range-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .number-trainer .nt-range-row label { font-size: 0.9rem; color: #555; }
+    .number-trainer .nt-range-row select { padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e5e5; font-size: 0.95rem; }
+    .number-trainer .nt-card { width: 100%; max-width: 380px; background: #fff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 32px 24px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    .number-trainer .nt-chinese { font-size: 2.8rem; font-weight: 700; letter-spacing: 0.08em; color: #1a1a1a; min-height: 1.2em; }
+    .number-trainer .nt-pinyin { font-size: 1rem; color: #888; min-height: 1.4em; margin-top: 4px; }
+    .number-trainer .nt-speak-btn { margin-top: 8px; padding: 8px 20px; background: #f0f4ff; border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; cursor: pointer; font-size: 0.9rem; color: #2563eb; }
+    .number-trainer .nt-speak-btn:hover { background: #dbeafe; }
+    .number-trainer .nt-input-row { display: flex; gap: 8px; margin-top: 16px; justify-content: center; }
+    .number-trainer .nt-input { width: 140px; padding: 10px 14px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 1.3rem; text-align: center; outline: none; transition: border-color 0.15s; }
+    .number-trainer .nt-input:focus { border-color: #2563eb; }
+    .number-trainer .nt-input.correct { border-color: #16a34a; background: #f0fdf4; }
+    .number-trainer .nt-input.wrong { border-color: #dc2626; background: #fef2f2; }
+    .number-trainer .nt-check-btn { padding: 10px 20px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; }
+    .number-trainer .nt-check-btn:hover { background: #1d4ed8; }
+    .number-trainer .nt-check-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .number-trainer .nt-feedback { font-size: 1rem; font-weight: 500; min-height: 1.4em; }
+    .number-trainer .nt-feedback.correct { color: #16a34a; }
+    .number-trainer .nt-feedback.wrong { color: #dc2626; }
+    .number-trainer .nt-score { font-size: 0.85rem; color: #888; }
+    .number-trainer .nt-next-btn { padding: 8px 20px; background: #f0f0f0; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; display: none; }
+    .number-trainer .nt-next-btn:hover { background: #e0e0e0; }
   </style>
 </head>
 <body>
@@ -105,6 +128,7 @@
       <a href="#" class="nav-link" data-screen="favorites">❤️ <span data-i18n="nav_favorites">Favoriten</span></a>
       <a href="#" class="nav-link" data-screen="saved">💾 <span data-i18n="nav_saved">Gespeicherte Wörter</span></a>
       <a href="#" class="nav-link" data-screen="new-story">✨ <span data-i18n="nav_new_story">Neue Geschichte</span></a>
+      <a href="#" class="nav-link" data-screen="numbers">🔢 <span data-i18n="nav_numbers">Zahlentrainer</span></a>
       <a href="#" class="nav-link" data-screen="settings">⚙️ <span data-i18n="nav_settings">Einstellungen</span></a>
     </aside>
     <div class="main">
@@ -201,6 +225,33 @@
               <span data-i18n="voice_show_all">Alle Stimmen anzeigen (auch andere Sprachen)</span>
             </label>
             <ul id="settings-voice-list" class="voice-list"></ul>
+          </div>
+        </div>
+        <div id="screen-numbers" class="screen">
+          <h1 class="page-title" data-i18n="numbers_title">Zahlentrainer</h1>
+          <p class="muted" data-i18n="numbers_desc">Höre die chinesische Zahl und tippe sie als Ziffer ein.</p>
+          <div class="number-trainer" id="number-trainer-ui">
+            <div class="nt-range-row">
+              <label for="nt-range" data-i18n="numbers_range">Bereich:</label>
+              <select id="nt-range">
+                <option value="10">1 – 10</option>
+                <option value="100">1 – 100</option>
+                <option value="1000" selected>1 – 1 000</option>
+                <option value="10000">1 – 10 000</option>
+              </select>
+            </div>
+            <div class="nt-card">
+              <div class="nt-chinese" id="nt-chinese">—</div>
+              <div class="nt-pinyin" id="nt-pinyin"></div>
+              <button class="nt-speak-btn" id="nt-speak-btn" data-i18n="numbers_speak">🔊 Vorlesen</button>
+              <div class="nt-input-row">
+                <input class="nt-input" id="nt-input" type="number" min="1" placeholder="?">
+                <button class="nt-check-btn" id="nt-check-btn" data-i18n="numbers_check">Prüfen</button>
+              </div>
+              <div class="nt-feedback" id="nt-feedback"></div>
+              <button class="nt-next-btn" id="nt-next-btn" data-i18n="numbers_next">Weiter</button>
+            </div>
+            <div class="nt-score" id="nt-score"></div>
           </div>
         </div>
         <div id="screen-reader" class="screen"></div>
@@ -339,7 +390,12 @@
         status_generating: "Generiere Geschichte …", status_created: "Geschichte wurde erstellt und zur Bibliothek hinzugefügt.", status_error: "Fehler bei der Generierung.",
         app_lang: "Sprache der Anwendung", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
         audio_need_server: "Audio funktioniert nur, wenn die App über einen Webserver geöffnet wird. Bitte starten Sie start-server.bat und rufen Sie im Browser http://localhost:8080 auf (nicht als Datei/file:// öffnen).",
-        audio_not_supported: "Sprachausgabe ist in diesem Browser oder Kontext nicht verfügbar."
+        audio_not_supported: "Sprachausgabe ist in diesem Browser oder Kontext nicht verfügbar.",
+        nav_numbers: "Zahlentrainer",
+        numbers_title: "Zahlentrainer", numbers_desc: "Höre die chinesische Zahl und tippe sie als Ziffer ein.",
+        numbers_range: "Bereich:", numbers_speak: "🔊 Vorlesen", numbers_check: "Prüfen",
+        numbers_correct: "Richtig! 🎉", numbers_wrong: "Falsch. Die Zahl war:", numbers_next: "Weiter",
+        numbers_score: "Richtig:", numbers_of: "von"
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -374,7 +430,12 @@
         status_generating: "Generating story …", status_created: "Story was created and added to the library.", status_error: "Error generating story.",
         app_lang: "App language", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
         audio_need_server: "Audio only works when the app is opened via a web server. Please run start-server.bat and open http://localhost:8080 in your browser (do not open as file://).",
-        audio_not_supported: "Speech playback is not available in this browser or context."
+        audio_not_supported: "Speech playback is not available in this browser or context.",
+        nav_numbers: "Number Trainer",
+        numbers_title: "Number Trainer", numbers_desc: "Listen to the Chinese number and type it as a digit.",
+        numbers_range: "Range:", numbers_speak: "🔊 Read aloud", numbers_check: "Check",
+        numbers_correct: "Correct! 🎉", numbers_wrong: "Wrong. The number was:", numbers_next: "Next",
+        numbers_score: "Correct:", numbers_of: "of"
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -409,7 +470,12 @@
         status_generating: "Generando historia …", status_created: "La historia se creó y se añadió a la biblioteca.", status_error: "Error al generar la historia.",
         app_lang: "Idioma de la aplicación", app_lang_de: "Deutsch", app_lang_en: "English", app_lang_es: "Español",
         audio_need_server: "El audio solo funciona cuando la app se abre mediante un servidor web. Ejecuta start-server.bat y abre http://localhost:8080 en el navegador (no como file://).",
-        audio_not_supported: "La voz no está disponible en este navegador o contexto."
+        audio_not_supported: "La voz no está disponible en este navegador o contexto.",
+        nav_numbers: "Entrenador de números",
+        numbers_title: "Entrenador de números", numbers_desc: "Escucha el número chino y escríbelo como cifra.",
+        numbers_range: "Rango:", numbers_speak: "🔊 Leer en voz alta", numbers_check: "Comprobar",
+        numbers_correct: "¡Correcto! 🎉", numbers_wrong: "Incorrecto. El número era:", numbers_next: "Siguiente",
+        numbers_score: "Correctas:", numbers_of: "de"
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -1519,7 +1585,136 @@
       if (screenId === "library") renderLibrary();
       if (screenId === "saved") renderSavedScreen();
       if (screenId === "settings") renderSettings();
+      if (screenId === "numbers") initNumberTrainer();
     }
+
+    // ── Number Trainer ──────────────────────────────────────────────────
+    var NT_DIGITS_ZH = ["零","一","二","三","四","五","六","七","八","九"];
+    var NT_DIGITS_PY = ["líng","yī","èr","sān","sì","wǔ","liù","qī","bā","jiǔ"];
+
+    function numberToChinese(n) {
+      if (n === 0) return "零";
+      var result = "", needZero = false;
+      var wan = Math.floor(n / 10000); n %= 10000;
+      var qian = Math.floor(n / 1000); n %= 1000;
+      var bai = Math.floor(n / 100);   n %= 100;
+      var shi = Math.floor(n / 10);    var ge = n % 10;
+      if (wan > 0)  { result += NT_DIGITS_ZH[wan] + "万"; needZero = false; }
+      if (qian > 0) { if (needZero) { result += "零"; needZero = false; } result += NT_DIGITS_ZH[qian] + "千"; }
+      else if (wan > 0 && (bai||shi||ge)) { needZero = true; }
+      if (bai > 0)  { if (needZero) { result += "零"; needZero = false; } result += NT_DIGITS_ZH[bai] + "百"; }
+      else if ((wan||qian) && (shi||ge)) { needZero = true; }
+      if (shi > 0)  { if (needZero) { result += "零"; needZero = false; }
+                      result += (shi === 1 && !wan && !qian && !bai) ? "十" : NT_DIGITS_ZH[shi] + "十"; }
+      else if ((wan||qian||bai) && ge) { needZero = true; }
+      if (ge > 0)   { if (needZero) result += "零"; result += NT_DIGITS_ZH[ge]; }
+      return result;
+    }
+
+    function numberToPinyin(n) {
+      if (n === 0) return "líng";
+      var result = "", needZero = false;
+      var wan = Math.floor(n / 10000); n %= 10000;
+      var qian = Math.floor(n / 1000); n %= 1000;
+      var bai = Math.floor(n / 100);   n %= 100;
+      var shi = Math.floor(n / 10);    var ge = n % 10;
+      if (wan > 0)  { result += NT_DIGITS_PY[wan] + " wàn"; needZero = false; }
+      if (qian > 0) { if (needZero) { result += " líng"; needZero = false; } result += (result?" ":"") + NT_DIGITS_PY[qian] + " qiān"; }
+      else if (wan > 0 && (bai||shi||ge)) { needZero = true; }
+      if (bai > 0)  { if (needZero) { result += " líng"; needZero = false; } result += (result?" ":"") + NT_DIGITS_PY[bai] + " bǎi"; }
+      else if ((wan||qian) && (shi||ge)) { needZero = true; }
+      if (shi > 0)  { if (needZero) { result += " líng"; needZero = false; }
+                      result += (result?" ":"") + ((shi===1 && !wan && !qian && !bai) ? "shí" : NT_DIGITS_PY[shi] + " shí"); }
+      else if ((wan||qian||bai) && ge) { needZero = true; }
+      if (ge > 0)   { if (needZero) result += " líng"; result += (result?" ":"") + NT_DIGITS_PY[ge]; }
+      return result;
+    }
+
+    var ntState = { current: 0, correct: 0, total: 0, answered: false };
+
+    function ntSpeak(num) {
+      var zh = numberToChinese(num);
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(zh);
+      u.lang = "zh-CN";
+      var savedVoice = null;
+      try { savedVoice = localStorage.getItem(VOICE_KEY); } catch(e) {}
+      if (savedVoice) {
+        var voices = window.speechSynthesis.getVoices();
+        for (var i = 0; i < voices.length; i++) {
+          if (voices[i].name === savedVoice) { u.voice = voices[i]; break; }
+        }
+      }
+      window.speechSynthesis.speak(u);
+    }
+
+    function ntNewNumber() {
+      var range = parseInt(document.getElementById("nt-range").value, 10) || 100;
+      var n = Math.floor(Math.random() * range) + 1;
+      ntState.current = n;
+      ntState.answered = false;
+      document.getElementById("nt-chinese").textContent = numberToChinese(n);
+      document.getElementById("nt-pinyin").textContent = "";
+      var inp = document.getElementById("nt-input");
+      inp.value = "";
+      inp.className = "nt-input";
+      inp.disabled = false;
+      inp.focus();
+      document.getElementById("nt-feedback").textContent = "";
+      document.getElementById("nt-feedback").className = "nt-feedback";
+      document.getElementById("nt-check-btn").disabled = false;
+      document.getElementById("nt-next-btn").style.display = "none";
+      ntSpeak(n);
+      ntUpdateScore();
+    }
+
+    function ntUpdateScore() {
+      var el = document.getElementById("nt-score");
+      if (!el) return;
+      if (ntState.total === 0) { el.textContent = ""; return; }
+      el.textContent = t("numbers_score") + " " + ntState.correct + " " + t("numbers_of") + " " + ntState.total;
+    }
+
+    function ntCheck() {
+      if (ntState.answered) return;
+      var inp = document.getElementById("nt-input");
+      var val = parseInt(inp.value, 10);
+      var fb = document.getElementById("nt-feedback");
+      ntState.total++;
+      ntState.answered = true;
+      document.getElementById("nt-check-btn").disabled = true;
+      inp.disabled = true;
+      document.getElementById("nt-pinyin").textContent = numberToPinyin(ntState.current);
+      if (val === ntState.current) {
+        ntState.correct++;
+        inp.className = "nt-input correct";
+        fb.textContent = t("numbers_correct");
+        fb.className = "nt-feedback correct";
+        ntUpdateScore();
+        setTimeout(ntNewNumber, 1400);
+      } else {
+        inp.className = "nt-input wrong";
+        fb.textContent = t("numbers_wrong") + " " + ntState.current;
+        fb.className = "nt-feedback wrong";
+        ntUpdateScore();
+        document.getElementById("nt-next-btn").style.display = "";
+      }
+    }
+
+    function initNumberTrainer() {
+      ntState.correct = 0; ntState.total = 0; ntState.answered = false;
+      var rangeEl = document.getElementById("nt-range");
+      rangeEl.onchange = ntNewNumber;
+      document.getElementById("nt-speak-btn").onclick = function() { ntSpeak(ntState.current); };
+      document.getElementById("nt-check-btn").onclick = ntCheck;
+      document.getElementById("nt-next-btn").onclick = ntNewNumber;
+      document.getElementById("nt-input").onkeydown = function(e) {
+        if (e.key === "Enter") ntCheck();
+      };
+      ntNewNumber();
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     document.querySelectorAll(".nav-link").forEach(function(link) {
       link.addEventListener("click", function(e) {
