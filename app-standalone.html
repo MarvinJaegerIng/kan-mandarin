@@ -1654,7 +1654,7 @@
       var n = Math.floor(Math.random() * range) + 1;
       ntState.current = n;
       ntState.answered = false;
-      document.getElementById("nt-chinese").textContent = numberToChinese(n);
+      document.getElementById("nt-chinese").textContent = "？";
       document.getElementById("nt-pinyin").textContent = "";
       var inp = document.getElementById("nt-input");
       inp.value = "";
@@ -1685,21 +1685,20 @@
       ntState.answered = true;
       document.getElementById("nt-check-btn").disabled = true;
       inp.disabled = true;
+      document.getElementById("nt-chinese").textContent = numberToChinese(ntState.current);
       document.getElementById("nt-pinyin").textContent = numberToPinyin(ntState.current);
       if (val === ntState.current) {
         ntState.correct++;
         inp.className = "nt-input correct";
         fb.textContent = t("numbers_correct");
         fb.className = "nt-feedback correct";
-        ntUpdateScore();
-        setTimeout(ntNewNumber, 1400);
       } else {
         inp.className = "nt-input wrong";
         fb.textContent = t("numbers_wrong") + " " + ntState.current;
         fb.className = "nt-feedback wrong";
-        ntUpdateScore();
-        document.getElementById("nt-next-btn").style.display = "";
       }
+      ntUpdateScore();
+      document.getElementById("nt-next-btn").style.display = "";
     }
 
     function initNumberTrainer() {
