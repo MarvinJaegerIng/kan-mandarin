@@ -232,6 +232,10 @@
           <p class="muted" data-i18n="numbers_desc">Höre die chinesische Zahl und tippe sie als Ziffer ein.</p>
           <div class="number-trainer" id="number-trainer-ui">
             <div class="nt-range-row">
+              <label for="nt-voice" data-i18n="numbers_voice">Stimme:</label>
+              <select id="nt-voice"></select>
+            </div>
+            <div class="nt-range-row">
               <label for="nt-range" data-i18n="numbers_range">Bereich:</label>
               <select id="nt-range">
                 <option value="10">1 – 10</option>
@@ -395,7 +399,7 @@
         numbers_title: "Zahlentrainer", numbers_desc: "Höre die chinesische Zahl und tippe sie als Ziffer ein.",
         numbers_range: "Bereich:", numbers_speak: "🔊 Vorlesen", numbers_check: "Prüfen",
         numbers_correct: "Richtig! 🎉", numbers_wrong: "Falsch. Die Zahl war:", numbers_next: "Weiter",
-        numbers_score: "Richtig:", numbers_of: "von"
+        numbers_score: "Richtig:", numbers_of: "von", numbers_voice: "Stimme:"
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -435,7 +439,7 @@
         numbers_title: "Number Trainer", numbers_desc: "Listen to the Chinese number and type it as a digit.",
         numbers_range: "Range:", numbers_speak: "🔊 Read aloud", numbers_check: "Check",
         numbers_correct: "Correct! 🎉", numbers_wrong: "Wrong. The number was:", numbers_next: "Next",
-        numbers_score: "Correct:", numbers_of: "of"
+        numbers_score: "Correct:", numbers_of: "of", numbers_voice: "Voice:"
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -475,7 +479,7 @@
         numbers_title: "Entrenador de números", numbers_desc: "Escucha el número chino y escríbelo como cifra.",
         numbers_range: "Rango:", numbers_speak: "🔊 Leer en voz alta", numbers_check: "Comprobar",
         numbers_correct: "¡Correcto! 🎉", numbers_wrong: "Incorrecto. El número era:", numbers_next: "Siguiente",
-        numbers_score: "Correctas:", numbers_of: "de"
+        numbers_score: "Correctas:", numbers_of: "de", numbers_voice: "Voz:"
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -1467,6 +1471,12 @@
       u.volume = 1;
       var voice = getSelectedVoice();
       if (voice) u.voice = voice;
+      var boundaryFired = false;
+      u.addEventListener("boundary", function(e) {
+        boundaryFired = true;
+        if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+        setCurrentReadingChar(ttsSentenceIndex, e.charIndex || 0);
+      });
       u.onstart = function() {
         currentSegmentIndex = ttsSentenceIndex;
         currentTime = seg.start;
@@ -1478,17 +1488,18 @@
           var startWall = Date.now();
           var rate = Math.max(0.1, Math.min(4, playbackSpeed));
           var estimatedDuration = (numChars * 0.22) / rate;
-          readingCharInterval = setInterval(function() {
-            var elapsed = (Date.now() - startWall) / 1000;
-            if (elapsed >= estimatedDuration) {
-              clearInterval(readingCharInterval);
-              readingCharInterval = null;
-              setCurrentReadingChar(-1, -1);
-              return;
-            }
-            var charIndex = Math.min(Math.floor((elapsed / estimatedDuration) * numChars), numChars - 1);
-            setCurrentReadingChar(ttsSentenceIndex, charIndex);
-          }, 50);
+          setTimeout(function() {
+            if (boundaryFired) return;
+            readingCharInterval = setInterval(function() {
+              var elapsed = (Date.now() - startWall) / 1000;
+              if (elapsed >= estimatedDuration) {
+                clearInterval(readingCharInterval); readingCharInterval = null;
+                setCurrentReadingChar(-1, -1); return;
+              }
+              var charIndex = Math.min(Math.floor((elapsed / estimatedDuration) * numChars), numChars - 1);
+              setCurrentReadingChar(ttsSentenceIndex, charIndex);
+            }, 50);
+          }, 200);
         }
       };
       u.onend = function() {
@@ -1701,8 +1712,28 @@
       document.getElementById("nt-next-btn").style.display = "block";
     }
 
+    function ntPopulateVoices() {
+      var sel = document.getElementById("nt-voice");
+      if (!sel) return;
+      var voices = getChineseVoices();
+      var selected = getSelectedVoiceName();
+      sel.innerHTML = "";
+      voices.forEach(function(v) {
+        var opt = document.createElement("option");
+        opt.value = v.name;
+        opt.textContent = v.name;
+        if (v.name === selected) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.onchange = function() { setSelectedVoiceName(sel.value); };
+    }
+
     function initNumberTrainer() {
       ntState.correct = 0; ntState.total = 0; ntState.answered = false;
+      ntPopulateVoices();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = function() { ntPopulateVoices(); };
+      }
       var rangeEl = document.getElementById("nt-range");
       rangeEl.onchange = ntNewNumber;
       document.getElementById("nt-speak-btn").onclick = function() { ntSpeak(ntState.current); };
