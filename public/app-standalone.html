@@ -247,7 +247,14 @@
               <button class="btn btn-secondary" id="paste-clear-btn" data-i18n="paste_clear">Leeren</button>
               <button class="btn btn-secondary" id="paste-save-btn" data-i18n="paste_save" style="display:none">📚 Als Geschichte speichern</button>
             </div>
-            <div id="paste-status" class="status" style="margin-top:8px"></div>
+          </div>
+          <div id="paste-save-section" style="display:none;margin-top:14px;padding:14px;background:#f8f8f8;border-radius:10px;border:1px solid #e5e5e5;">
+            <label for="paste-title-input" style="display:block;font-size:0.9rem;color:#555;margin-bottom:6px;" data-i18n="paste_title_label">Titel der Geschichte:</label>
+            <input type="text" id="paste-title-input" style="width:100%;max-width:400px;padding:8px 10px;border:1px solid #e5e5e5;border-radius:6px;font-size:1rem;">
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="paste-confirm-save-btn" data-i18n="paste_confirm_save">Speichern &amp; zur Bibliothek</button>
+              <button class="btn btn-secondary" id="paste-cancel-save-btn" data-i18n="paste_cancel_save">Abbrechen</button>
+            </div>
           </div>
           <div id="paste-word-box" class="selected-sentence-box empty" style="display:none"></div>
           <div id="paste-output"></div>
@@ -433,7 +440,10 @@
         paste_no_text: "Bitte zuerst Text eingeben.",
         paste_save: "📚 Als Geschichte speichern",
         paste_story_label: "(Eigener Text)",
-        paste_story_saved: "Geschichte zur Bibliothek hinzugefügt!"
+        paste_story_saved: "Geschichte zur Bibliothek hinzugefügt!",
+        paste_title_label: "Titel der Geschichte:",
+        paste_confirm_save: "Speichern & zur Bibliothek",
+        paste_cancel_save: "Abbrechen"
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -482,7 +492,10 @@
         paste_no_text: "Please enter some text first.",
         paste_save: "📚 Save as story",
         paste_story_label: "(Custom text)",
-        paste_story_saved: "Story added to the library!"
+        paste_story_saved: "Story added to the library!",
+        paste_title_label: "Story title:",
+        paste_confirm_save: "Save & go to library",
+        paste_cancel_save: "Cancel"
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -531,7 +544,10 @@
         paste_no_text: "Por favor, introduce primero un texto.",
         paste_save: "📚 Guardar como historia",
         paste_story_label: "(Texto propio)",
-        paste_story_saved: "¡Historia añadida a la biblioteca!"
+        paste_story_saved: "¡Historia añadida a la biblioteca!",
+        paste_title_label: "Título de la historia:",
+        paste_confirm_save: "Guardar e ir a la biblioteca",
+        paste_cancel_save: "Cancelar"
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -1667,22 +1683,28 @@
       return segs.length ? segs : [text.trim()];
     }
 
+    function isCJKChar(ch) {
+      if (!ch) return false;
+      var c = ch.charCodeAt(0);
+      return (c >= 0x4E00 && c <= 0x9FFF) || (c >= 0x3400 && c <= 0x4DBF) || (c >= 0xF900 && c <= 0xFAFF);
+    }
+
     function renderPasteOutput() {
       var raw = document.getElementById("paste-input").value.trim();
       var output = document.getElementById("paste-output");
       var wordBox = document.getElementById("paste-word-box");
       var saveBtn = document.getElementById("paste-save-btn");
+      var saveSection = document.getElementById("paste-save-section");
       if (!raw) {
         output.innerHTML = '<p class="muted">' + t("paste_no_text") + '</p>';
         wordBox.style.display = "none";
         if (saveBtn) saveBtn.style.display = "none";
+        if (saveSection) saveSection.style.display = "none";
         return;
       }
       pasteSegments = splitPasteText(raw);
-
-      // Build DOM directly — closures capture segText and charIdx exactly,
-      // avoiding any attribute-lookup bugs.
       output.innerHTML = "";
+
       for (var i = 0; i < pasteSegments.length; i++) {
         var segText = pasteSegments[i];
         var sentDiv = document.createElement("div");
@@ -1700,22 +1722,24 @@
               var found = findWordAtIndex(capturedSeg, capturedCharIdx);
               if (!found) return;
 
-              // Highlight the matched word characters
+              // Skip punctuation / non-CJK single chars
+              if (found.word.length === 1 && !isCJKChar(found.word)) return;
+
               output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
               var allCharsInSent = span.parentElement.querySelectorAll(".char");
               for (var fi = found.start; fi < found.end; fi++) {
                 if (allCharsInSent[fi]) allCharsInSent[fi].classList.add("char-pressed");
               }
 
-              // Show word info box
               var entry = lookup(found.word);
               var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : "";
               var meaning = getEntryMeaning(entry) || "";
               wordBox.className = "selected-sentence-box";
               wordBox.innerHTML =
-                '<div class="translation-top"><strong>' + (entry.word || "") + '</strong>' +
-                (pinyin ? ' <span style="font-weight:400;color:#555">' + pinyin + '</span>' : '') +
-                '</div><div class="pinyin-top">' + meaning + '</div>';
+                '<div class="translation-top"><strong>' + escapeHtml(entry.word || "") + '</strong>' +
+                (pinyin ? ' <span style="font-weight:400;color:#555">' + escapeHtml(pinyin) + '</span>' : '') +
+                '</div>' +
+                (meaning && !isNotFoundMeaning(meaning) ? '<div class="pinyin-top">' + escapeHtml(meaning) + '</div>' : '');
               if (window.speechSynthesis) {
                 var speakBtn = document.createElement("button");
                 speakBtn.textContent = "🔊";
@@ -1724,8 +1748,7 @@
                   var u = new SpeechSynthesisUtterance(entry.word);
                   u.lang = "zh-CN";
                   var v = getSelectedVoice(); if (v) u.voice = v;
-                  window.speechSynthesis.cancel();
-                  window.speechSynthesis.speak(u);
+                  window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
                 };
                 wordBox.appendChild(speakBtn);
               }
@@ -1733,12 +1756,10 @@
             charsDiv.appendChild(span);
           })(segText, j);
         }
-
         sentDiv.appendChild(charsDiv);
         output.appendChild(sentDiv);
       }
 
-      // Use .onclick (not addEventListener) so re-renders don't stack listeners
       output.onclick = function(e) {
         if (!e.target.classList.contains("char")) {
           output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
@@ -1751,12 +1772,13 @@
       wordBox.className = "selected-sentence-box empty";
       wordBox.textContent = t("paste_click_char");
       if (saveBtn) saveBtn.style.display = "";
+      if (saveSection) saveSection.style.display = "none";
     }
 
-    function saveTextAsStory() {
-      var raw = document.getElementById("paste-input").value.trim();
-      if (!raw || !pasteSegments.length) return;
-      var title = raw.replace(/\n/g, "").slice(0, 14) + (raw.replace(/\n/g,"").length > 14 ? "…" : "");
+    function confirmSaveTextAsStory() {
+      if (!pasteSegments.length) return;
+      var titleInput = document.getElementById("paste-title-input");
+      var title = (titleInput && titleInput.value.trim()) || pasteSegments[0].slice(0, 14);
       var storyId = "paste-" + Date.now();
       var secsPerSeg = 4;
       var sentences = [];
@@ -1777,27 +1799,39 @@
       generated.push(story);
       saveGeneratedStories(generated);
       STORIES = INITIAL_STORIES.concat(getGeneratedStories());
-      var status = document.getElementById("paste-status");
-      if (status) {
-        status.textContent = t("paste_story_saved");
-        status.className = "status success";
-        setTimeout(function() { status.textContent = ""; status.className = "status"; }, 3000);
-      }
+      showScreen("library");
     }
 
     function initPasteScreen() {
       document.getElementById("paste-render-btn").onclick = renderPasteOutput;
-      document.getElementById("paste-save-btn").onclick = saveTextAsStory;
+      document.getElementById("paste-save-btn").onclick = function() {
+        if (!pasteSegments.length) return;
+        var sec = document.getElementById("paste-save-section");
+        var inp = document.getElementById("paste-title-input");
+        if (sec) sec.style.display = "";
+        if (inp) {
+          inp.value = pasteSegments[0].slice(0, 14);
+          inp.focus(); inp.select();
+        }
+      };
+      document.getElementById("paste-confirm-save-btn").onclick = confirmSaveTextAsStory;
+      document.getElementById("paste-cancel-save-btn").onclick = function() {
+        var sec = document.getElementById("paste-save-section");
+        if (sec) sec.style.display = "none";
+      };
       document.getElementById("paste-clear-btn").onclick = function() {
         document.getElementById("paste-input").value = "";
         document.getElementById("paste-output").innerHTML = "";
         document.getElementById("paste-word-box").style.display = "none";
         document.getElementById("paste-save-btn").style.display = "none";
-        document.getElementById("paste-status").textContent = "";
+        document.getElementById("paste-save-section").style.display = "none";
         pasteSegments = [];
       };
       document.getElementById("paste-input").onkeydown = function(e) {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) renderPasteOutput();
+      };
+      document.getElementById("paste-title-input").onkeydown = function(e) {
+        if (e.key === "Enter") confirmSaveTextAsStory();
       };
     }
     // ─────────────────────────────────────────────────────────────────────
