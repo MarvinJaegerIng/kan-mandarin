@@ -96,6 +96,15 @@
     .voice-sample-btn:hover { background: #d0d0d0; }
     .help-section .link { color: #2563eb; text-decoration: none; }
     .help-section .link:hover { text-decoration: underline; }
+    .paste-area textarea { width: 100%; min-height: 110px; padding: 12px; border: 1px solid #e5e5e5; border-radius: 8px; font-size: 1.1rem; resize: vertical; line-height: 1.6; }
+    .paste-area .btn-row { margin-top: 10px; display: flex; gap: 10px; }
+    .paste-area .btn { padding: 9px 18px; border-radius: 8px; border: none; font-weight: 500; cursor: pointer; font-size: 0.95rem; }
+    .paste-area .btn-primary { background: #2563eb; color: #fff; }
+    .paste-area .btn-primary:hover { background: #1d4ed8; }
+    .paste-area .btn-secondary { background: #f0f0f0; color: #1a1a1a; }
+    .paste-area .btn-secondary:hover { background: #e5e5e5; }
+    #paste-word-box { margin-top: 20px; }
+    #paste-output { margin-top: 4px; }
     .number-trainer { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 8px 0; }
     .number-trainer .nt-range-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
     .number-trainer .nt-range-row label { font-size: 0.9rem; color: #555; }
@@ -128,6 +137,7 @@
       <a href="#" class="nav-link" data-screen="favorites">❤️ <span data-i18n="nav_favorites">Favoriten</span></a>
       <a href="#" class="nav-link" data-screen="saved">💾 <span data-i18n="nav_saved">Gespeicherte Wörter</span></a>
       <a href="#" class="nav-link" data-screen="new-story">✨ <span data-i18n="nav_new_story">Neue Geschichte</span></a>
+      <a href="#" class="nav-link" data-screen="paste">📖 <span data-i18n="nav_paste">Text lesen</span></a>
       <a href="#" class="nav-link" data-screen="numbers">🔢 <span data-i18n="nav_numbers">Zahlentrainer</span></a>
       <a href="#" class="nav-link" data-screen="settings">⚙️ <span data-i18n="nav_settings">Einstellungen</span></a>
     </aside>
@@ -226,6 +236,19 @@
             </label>
             <ul id="settings-voice-list" class="voice-list"></ul>
           </div>
+        </div>
+        <div id="screen-paste" class="screen">
+          <h1 class="page-title" data-i18n="paste_title">Eigener Text</h1>
+          <p class="muted" data-i18n="paste_desc">Hanzi-Text einfügen – dann auf Zeichen klicken für Übersetzung.</p>
+          <div class="paste-area">
+            <textarea id="paste-input" data-i18n-placeholder="paste_placeholder"></textarea>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="paste-render-btn" data-i18n="paste_render">Anzeigen</button>
+              <button class="btn btn-secondary" id="paste-clear-btn" data-i18n="paste_clear">Leeren</button>
+            </div>
+          </div>
+          <div id="paste-word-box" class="selected-sentence-box empty" style="display:none"></div>
+          <div id="paste-output"></div>
         </div>
         <div id="screen-numbers" class="screen">
           <h1 class="page-title" data-i18n="numbers_title">Zahlentrainer</h1>
@@ -399,7 +422,13 @@
         numbers_title: "Zahlentrainer", numbers_desc: "Höre die chinesische Zahl und tippe sie als Ziffer ein.",
         numbers_range: "Bereich:", numbers_speak: "🔊 Vorlesen", numbers_check: "Prüfen",
         numbers_correct: "Richtig! 🎉", numbers_wrong: "Falsch. Die Zahl war:", numbers_next: "Weiter",
-        numbers_score: "Richtig:", numbers_of: "von", numbers_voice: "Stimme:"
+        numbers_score: "Richtig:", numbers_of: "von", numbers_voice: "Stimme:",
+        nav_paste: "Text lesen",
+        paste_title: "Eigener Text", paste_desc: "Hanzi-Text einfügen – dann auf Zeichen klicken für Übersetzung.",
+        paste_placeholder: "Chinesischen Text hier einfügen …",
+        paste_render: "Anzeigen", paste_clear: "Leeren",
+        paste_click_char: "Auf ein Zeichen klicken für Wort und Bedeutung.",
+        paste_no_text: "Bitte zuerst Text eingeben."
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -439,7 +468,13 @@
         numbers_title: "Number Trainer", numbers_desc: "Listen to the Chinese number and type it as a digit.",
         numbers_range: "Range:", numbers_speak: "🔊 Read aloud", numbers_check: "Check",
         numbers_correct: "Correct! 🎉", numbers_wrong: "Wrong. The number was:", numbers_next: "Next",
-        numbers_score: "Correct:", numbers_of: "of", numbers_voice: "Voice:"
+        numbers_score: "Correct:", numbers_of: "of", numbers_voice: "Voice:",
+        nav_paste: "Read Text",
+        paste_title: "Custom Text", paste_desc: "Paste Hanzi text – click characters for translation.",
+        paste_placeholder: "Paste Chinese text here …",
+        paste_render: "Show", paste_clear: "Clear",
+        paste_click_char: "Click a character to see the word and its meaning.",
+        paste_no_text: "Please enter some text first."
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -479,7 +514,13 @@
         numbers_title: "Entrenador de números", numbers_desc: "Escucha el número chino y escríbelo como cifra.",
         numbers_range: "Rango:", numbers_speak: "🔊 Leer en voz alta", numbers_check: "Comprobar",
         numbers_correct: "¡Correcto! 🎉", numbers_wrong: "Incorrecto. El número era:", numbers_next: "Siguiente",
-        numbers_score: "Correctas:", numbers_of: "de", numbers_voice: "Voz:"
+        numbers_score: "Correctas:", numbers_of: "de", numbers_voice: "Voz:",
+        nav_paste: "Leer texto",
+        paste_title: "Texto propio", paste_desc: "Pega texto en Hanzi – haz clic en los caracteres para ver la traducción.",
+        paste_placeholder: "Pega aquí texto en chino …",
+        paste_render: "Mostrar", paste_clear: "Borrar",
+        paste_click_char: "Haz clic en un carácter para ver la palabra y su significado.",
+        paste_no_text: "Por favor, introduce primero un texto."
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -1596,8 +1637,111 @@
       if (screenId === "library") renderLibrary();
       if (screenId === "saved") renderSavedScreen();
       if (screenId === "settings") renderSettings();
+      if (screenId === "paste") initPasteScreen();
       if (screenId === "numbers") initNumberTrainer();
     }
+
+    // ── Paste / Free Text Reader ────────────────────────────────────────
+    var pasteSegments = [];
+
+    function splitPasteText(text) {
+      var segs = [], cur = "";
+      for (var i = 0; i < text.length; i++) {
+        cur += text[i];
+        if ("。！？\n；".indexOf(text[i]) >= 0) {
+          var s = cur.trim(); if (s) segs.push(s); cur = "";
+        }
+      }
+      if (cur.trim()) segs.push(cur.trim());
+      return segs.length ? segs : [text.trim()];
+    }
+
+    function renderPasteOutput() {
+      var raw = document.getElementById("paste-input").value.trim();
+      var output = document.getElementById("paste-output");
+      var wordBox = document.getElementById("paste-word-box");
+      if (!raw) {
+        output.innerHTML = '<p class="muted">' + t("paste_no_text") + '</p>';
+        wordBox.style.display = "none";
+        return;
+      }
+      pasteSegments = splitPasteText(raw);
+      var html = "";
+      for (var i = 0; i < pasteSegments.length; i++) {
+        var seg = pasteSegments[i];
+        var charsHtml = "";
+        for (var j = 0; j < seg.length; j++) {
+          var c = seg[j].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+          charsHtml += '<span class="char" data-char-index="' + j + '">' + c + '</span>';
+        }
+        html += '<div class="sentence" data-paste-seg="' + i + '"><div class="chars">' + charsHtml + '</div></div>';
+      }
+      output.innerHTML = html;
+
+      wordBox.style.display = "";
+      wordBox.className = "selected-sentence-box empty";
+      wordBox.textContent = t("paste_click_char");
+
+      var charSpans = output.querySelectorAll(".char");
+      for (var k = 0; k < charSpans.length; k++) {
+        (function(span) {
+          span.addEventListener("click", function(e) {
+            e.stopPropagation();
+            var sentEl = span.parentElement && span.parentElement.closest ? span.parentElement.closest(".sentence") : null;
+            if (!sentEl) { sentEl = span.parentElement; while (sentEl && !sentEl.classList.contains("sentence")) sentEl = sentEl.parentElement; }
+            if (!sentEl) return;
+            var segIdx = parseInt(sentEl.getAttribute("data-paste-seg"), 10);
+            if (isNaN(segIdx) || segIdx >= pasteSegments.length) return;
+            var seg = pasteSegments[segIdx];
+            var charIdx = parseInt(span.getAttribute("data-char-index"), 10);
+            if (isNaN(charIdx)) return;
+            var found = findWordAtIndex(seg, charIdx);
+            if (!found) return;
+
+            output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
+            var sentChars = sentEl.querySelectorAll(".char");
+            for (var fi = found.start; fi < found.end && fi < sentChars.length; fi++) {
+              sentChars[fi].classList.add("char-pressed");
+            }
+
+            var entry = lookup(found.word);
+            var wordEsc = (entry.word || "").replace(/&/g, "&amp;");
+            var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : "";
+            var meaning = (getEntryMeaning(entry) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+            var speakBtn = window.speechSynthesis
+              ? '<button onclick="(function(){var u=new SpeechSynthesisUtterance(\'' + entry.word.replace(/'/g,"\\'") + '\');u.lang=\'zh-CN\';var v=getSelectedVoice();if(v)u.voice=v;window.speechSynthesis.cancel();window.speechSynthesis.speak(u);})()" style="padding:4px 10px;border:none;border-radius:6px;background:#f0f0f0;cursor:pointer;font-size:0.85rem;margin-top:6px">🔊</button>'
+              : "";
+            wordBox.className = "selected-sentence-box";
+            wordBox.innerHTML =
+              '<div class="translation-top"><strong>' + wordEsc + '</strong>' +
+              (pinyin ? ' <span style="font-weight:400;color:#555">' + pinyin + '</span>' : '') + '</div>' +
+              '<div class="pinyin-top">' + meaning + '</div>' + speakBtn;
+          });
+        })(charSpans[k]);
+      }
+
+      output.addEventListener("click", function(e) {
+        if (!e.target.classList.contains("char")) {
+          output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
+          wordBox.className = "selected-sentence-box empty";
+          wordBox.textContent = t("paste_click_char");
+        }
+      });
+    }
+
+    function initPasteScreen() {
+      document.getElementById("paste-render-btn").onclick = renderPasteOutput;
+      document.getElementById("paste-clear-btn").onclick = function() {
+        document.getElementById("paste-input").value = "";
+        document.getElementById("paste-output").innerHTML = "";
+        document.getElementById("paste-word-box").style.display = "none";
+        pasteSegments = [];
+      };
+      document.getElementById("paste-input").onkeydown = function(e) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) renderPasteOutput();
+      };
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     // ── Number Trainer ──────────────────────────────────────────────────
     var NT_DIGITS_ZH = ["零","一","二","三","四","五","六","七","八","九"];
