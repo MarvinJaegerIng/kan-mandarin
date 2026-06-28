@@ -1703,68 +1703,67 @@
         return;
       }
       pasteSegments = splitPasteText(raw);
-      output.innerHTML = "";
 
+      // Build HTML with data attributes for event delegation
+      var html = "";
       for (var i = 0; i < pasteSegments.length; i++) {
-        var segText = pasteSegments[i];
-        var sentDiv = document.createElement("div");
-        sentDiv.className = "sentence";
-        var charsDiv = document.createElement("div");
-        charsDiv.className = "chars";
-
-        for (var j = 0; j < segText.length; j++) {
-          (function(capturedSeg, capturedCharIdx) {
-            var span = document.createElement("span");
-            span.className = "char";
-            span.textContent = capturedSeg[capturedCharIdx];
-            span.addEventListener("click", function(e) {
-              e.stopPropagation();
-              var found = findWordAtIndex(capturedSeg, capturedCharIdx);
-              if (!found) return;
-
-              // Skip punctuation / non-CJK single chars
-              if (found.word.length === 1 && !isCJKChar(found.word)) return;
-
-              output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
-              var allCharsInSent = span.parentElement.querySelectorAll(".char");
-              for (var fi = found.start; fi < found.end; fi++) {
-                if (allCharsInSent[fi]) allCharsInSent[fi].classList.add("char-pressed");
-              }
-
-              var entry = lookup(found.word);
-              var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : "";
-              var meaning = getEntryMeaning(entry) || "";
-              wordBox.className = "selected-sentence-box";
-              wordBox.innerHTML =
-                '<div class="translation-top"><strong>' + escapeHtml(entry.word || "") + '</strong>' +
-                (pinyin ? ' <span style="font-weight:400;color:#555">' + escapeHtml(pinyin) + '</span>' : '') +
-                '</div>' +
-                (meaning && !isNotFoundMeaning(meaning) ? '<div class="pinyin-top">' + escapeHtml(meaning) + '</div>' : '');
-              if (window.speechSynthesis) {
-                var speakBtn = document.createElement("button");
-                speakBtn.textContent = "🔊";
-                speakBtn.style.cssText = "padding:4px 10px;border:none;border-radius:6px;background:#f0f0f0;cursor:pointer;font-size:0.85rem;margin-top:6px";
-                speakBtn.onclick = function() {
-                  var u = new SpeechSynthesisUtterance(entry.word);
-                  u.lang = "zh-CN";
-                  var v = getSelectedVoice(); if (v) u.voice = v;
-                  window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
-                };
-                wordBox.appendChild(speakBtn);
-              }
-            });
-            charsDiv.appendChild(span);
-          })(segText, j);
+        var seg = pasteSegments[i];
+        html += '<div class="sentence"><div class="chars">';
+        for (var j = 0; j < seg.length; j++) {
+          html += '<span class="char" data-si="' + i + '" data-ci="' + j + '">' + escapeHtml(seg[j]) + '</span>';
         }
-        sentDiv.appendChild(charsDiv);
-        output.appendChild(sentDiv);
+        html += '</div></div>';
       }
+      output.innerHTML = html;
 
+      // Single delegated handler — no closure-per-span needed
       output.onclick = function(e) {
-        if (!e.target.classList.contains("char")) {
+        var span = e.target;
+        if (!span.classList || !span.classList.contains("char")) {
           output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
           wordBox.className = "selected-sentence-box empty";
           wordBox.textContent = t("paste_click_char");
+          return;
+        }
+        var si = parseInt(span.getAttribute("data-si"), 10);
+        var ci = parseInt(span.getAttribute("data-ci"), 10);
+        if (isNaN(si) || isNaN(ci) || si < 0 || si >= pasteSegments.length) return;
+        var seg = pasteSegments[si];
+        if (!seg || ci < 0 || ci >= seg.length) return;
+
+        var found = findWordAtIndex(seg, ci);
+        if (!found) return;
+        if (found.word.length === 1 && !isCJKChar(found.word)) return;
+
+        output.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-pressed"); });
+        var charsDiv = span.parentElement;
+        if (charsDiv) {
+          var allCharsInSent = charsDiv.querySelectorAll(".char");
+          for (var fi = found.start; fi < found.end; fi++) {
+            if (allCharsInSent[fi]) allCharsInSent[fi].classList.add("char-pressed");
+          }
+        }
+
+        var entry = lookup(found.word);
+        var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : "";
+        var meaning = getEntryMeaning(entry) || "";
+        wordBox.className = "selected-sentence-box";
+        wordBox.innerHTML =
+          '<div class="translation-top"><strong>' + escapeHtml(entry.word || "") + '</strong>' +
+          (pinyin ? ' <span style="font-weight:400;color:#555">' + escapeHtml(pinyin) + '</span>' : '') +
+          '</div>' +
+          (meaning && !isNotFoundMeaning(meaning) ? '<div class="pinyin-top">' + escapeHtml(meaning) + '</div>' : '');
+        if (window.speechSynthesis) {
+          var speakBtn = document.createElement("button");
+          speakBtn.textContent = "🔊";
+          speakBtn.style.cssText = "padding:4px 10px;border:none;border-radius:6px;background:#f0f0f0;cursor:pointer;font-size:0.85rem;margin-top:6px";
+          speakBtn.onclick = function() {
+            var u = new SpeechSynthesisUtterance(entry.word);
+            u.lang = "zh-CN";
+            var v = getSelectedVoice(); if (v) u.voice = v;
+            window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+          };
+          wordBox.appendChild(speakBtn);
         }
       };
 
@@ -1796,9 +1795,9 @@
         sentences: sentences
       };
       var generated = getGeneratedStories();
-      generated.push(story);
+      generated.unshift(story);
       saveGeneratedStories(generated);
-      STORIES = INITIAL_STORIES.concat(getGeneratedStories());
+      STORIES = INITIAL_STORIES.concat(generated);
       showScreen("library");
     }
 
