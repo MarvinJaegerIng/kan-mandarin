@@ -1453,7 +1453,12 @@
         updateTimeDisplay();
         updateHighlight();
         if (audioEl) audioEl.currentTime = currentTime;
-        if (window.speechSynthesis && window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+          ttsSession++;
+          window.speechSynthesis.cancel();
+          var pb = document.querySelector("#play-btn");
+          if (pb) pb.textContent = "▶";
+        }
       };
       var speedSelect = readerScreen.querySelector("#speed-select");
       if (speedSelect) {
@@ -1587,14 +1592,19 @@
       if (!readingCharInterval) setCurrentReadingChar(-1, -1);
     }
     function setCurrentReadingChar(sentenceIndex, charIndex) {
+      setCurrentReadingRange(sentenceIndex, charIndex, charIndex + 1);
+    }
+    function setCurrentReadingRange(sentenceIndex, startChar, endChar) {
       var container = document.getElementById("reader-sentences");
       if (!container) return;
       container.querySelectorAll(".char").forEach(function(el) { el.classList.remove("char-reading"); });
-      if (sentenceIndex < 0 || charIndex < 0) return;
+      if (sentenceIndex < 0 || startChar < 0) return;
       var sentence = container.querySelector('.sentence[data-segment-index="' + sentenceIndex + '"]');
       if (!sentence) return;
       var chars = sentence.querySelectorAll(".chars .char");
-      if (chars[charIndex]) chars[charIndex].classList.add("char-reading");
+      for (var i = startChar; i < endChar && i < chars.length; i++) {
+        chars[i].classList.add("char-reading");
+      }
     }
 
     function updatePressedWordHighlight() {
@@ -1625,8 +1635,14 @@
       return m + ":" + (sec < 10 ? "0" : "") + sec;
     }
 
+    // Sitzungszähler: wird bei jedem Play/Stop erhöht. Callbacks alter
+    // Utterances (z. B. onend nach cancel()) erkennen daran, dass sie
+    // nicht weiterlesen dürfen.
+    var ttsSession = 0;
+
     function speakNextSentence() {
       if (!currentStory || !currentStory.sentences || !window.speechSynthesis) return;
+      var session = ttsSession;
       var sentences = currentStory.sentences;
       if (ttsSentenceIndex >= sentences.length) {
         var btn = document.querySelector("#play-btn");
@@ -1634,11 +1650,32 @@
         return;
       }
       var seg = sentences[ttsSentenceIndex];
+      var sentIdx = ttsSentenceIndex;
       var textToSpeak = (seg.text || "").trim();
       if (!textToSpeak) {
         ttsSentenceIndex++;
         speakNextSentence();
         return;
+      }
+      // Wort-Bereiche für die Hervorhebung (ganzes Wort statt einzelnes Zeichen)
+      var tokens = segmentText(textToSpeak, seg.pinyin || "");
+      var tokenRanges = [];
+      var tPos = 0;
+      for (var ti = 0; ti < tokens.length; ti++) {
+        var tw = tokens[ti].char || "";
+        tokenRanges.push({ start: tPos, end: tPos + tw.length, cjk: tw.length > 0 && isCJKChar(tw[0]) });
+        tPos += tw.length;
+      }
+      function highlightAtChar(ci) {
+        for (var r = 0; r < tokenRanges.length; r++) {
+          if (ci < tokenRanges[r].end) {
+            // Satzzeichen überspringen: nächstes CJK-Token nehmen
+            var rr = r;
+            while (rr < tokenRanges.length && !tokenRanges[rr].cjk) rr++;
+            if (rr < tokenRanges.length) setCurrentReadingRange(sentIdx, tokenRanges[rr].start, tokenRanges[rr].end);
+            return;
+          }
+        }
       }
       if (window.speechSynthesis.resume) window.speechSynthesis.resume();
       var u = new SpeechSynthesisUtterance(textToSpeak);
@@ -1649,12 +1686,17 @@
       if (voice) u.voice = voice;
       var boundaryFired = false;
       u.addEventListener("boundary", function(e) {
+        if (session !== ttsSession) return;
+        // Nur nutzen, wenn der Browser einen echten charIndex liefert –
+        // sonst bliebe die Markierung beim ersten Zeichen hängen.
+        if (typeof e.charIndex !== "number") return;
         boundaryFired = true;
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
-        setCurrentReadingChar(ttsSentenceIndex, e.charIndex || 0);
+        highlightAtChar(e.charIndex);
       });
       u.onstart = function() {
-        currentSegmentIndex = ttsSentenceIndex;
+        if (session !== ttsSession) return;
+        currentSegmentIndex = sentIdx;
         currentTime = seg.start;
         updateTimeDisplay();
         updateHighlight();
@@ -1665,15 +1707,18 @@
           var rate = Math.max(0.1, Math.min(4, playbackSpeed));
           var estimatedDuration = (numChars * 0.22) / rate;
           setTimeout(function() {
-            if (boundaryFired) return;
+            if (boundaryFired || session !== ttsSession) return;
             readingCharInterval = setInterval(function() {
+              if (session !== ttsSession) {
+                clearInterval(readingCharInterval); readingCharInterval = null; return;
+              }
               var elapsed = (Date.now() - startWall) / 1000;
               if (elapsed >= estimatedDuration) {
                 clearInterval(readingCharInterval); readingCharInterval = null;
                 setCurrentReadingChar(-1, -1); return;
               }
               var charIndex = Math.min(Math.floor((elapsed / estimatedDuration) * numChars), numChars - 1);
-              setCurrentReadingChar(ttsSentenceIndex, charIndex);
+              highlightAtChar(charIndex);
             }, 50);
           }, 200);
         }
@@ -1681,6 +1726,7 @@
       u.onend = function() {
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
+        if (session !== ttsSession) return; // gestoppt – nicht weiterlesen
         currentTime = seg.end;
         updateTimeDisplay();
         updateHighlight();
@@ -1695,6 +1741,7 @@
       u.onerror = function() {
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
+        if (session !== ttsSession) return; // gestoppt – nicht weiterlesen
         ttsSentenceIndex++;
         if (ttsSentenceIndex < sentences.length) speakNextSentence();
         else { var btn = document.querySelector("#play-btn"); if (btn) btn.textContent = "▶"; }
@@ -1716,7 +1763,8 @@
         }
         return;
       }
-      if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+        ttsSession++; // alte Utterance-Callbacks entwerten, sonst liest onend weiter
         window.speechSynthesis.cancel();
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
@@ -1756,6 +1804,7 @@
       }
       if (ttsSentenceIndex >= sentences.length) ttsSentenceIndex = 0;
       if (playBtn) playBtn.textContent = "⏸";
+      ttsSession++;
       speakNextSentence();
     }
 
@@ -1764,6 +1813,9 @@
       selectedSentenceIndex = null;
       if (playInterval) { clearInterval(playInterval); playInterval = null; }
       if (audioEl) { try { audioEl.pause(); } catch (e) {} audioEl = null; }
+      ttsSession++;
+      if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+      if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
       document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
       document.getElementById("screen-" + screenId).classList.add("active");
       document.querySelectorAll(".nav-link").forEach(function(l) {
