@@ -230,6 +230,8 @@
           <div class="settings-row" style="margin-top: 24px;">
             <label data-i18n="settings_voice">Stimme für Vorlesen (Audio)</label>
             <p class="muted" style="font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings_voice_desc">Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.</p>
+            <p class="muted" style="font-size: 0.8rem; margin: 8px 0 0 0; padding: 8px 10px; background: #fffbe6; border: 1px solid #f0e6b3; border-radius: 8px;" data-i18n="voice_hint">Tipp: Die Standard-Windows-Stimme klingt künstlich. Bessere Stimmen: 1) Öffne die App in Microsoft Edge – dort gibt es natürliche Online-Stimmen (z. B. „Xiaoxiao Online (Natural)“). 2) Oder installiere weitere Stimmen unter Windows: Einstellungen → Zeit und Sprache → Sprache &amp; Region → Sprache hinzufügen → „Chinesisch (vereinfacht)“ mit Sprachausgabe. Hinweis: Nicht-chinesische Stimmen können kein Chinesisch sprechen – der Browser nutzt dann automatisch die Standardstimme.</p>
+            <p class="muted" id="settings-voice-count" style="font-size: 0.8rem; margin: 6px 0 0 0;"></p>
             <label class="voice-show-all" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:0.9rem;">
               <input type="checkbox" id="settings-show-all-voices">
               <span data-i18n="voice_show_all">Alle Stimmen anzeigen (auch andere Sprachen)</span>
@@ -443,7 +445,11 @@
         paste_story_saved: "Geschichte zur Bibliothek hinzugefügt!",
         paste_title_label: "Titel der Geschichte:",
         paste_confirm_save: "Speichern & zur Bibliothek",
-        paste_cancel_save: "Abbrechen"
+        paste_cancel_save: "Abbrechen",
+        translating: "Übersetze …",
+        open_translator: "Im Google Übersetzer öffnen",
+        voice_hint: "Tipp: Die Standard-Windows-Stimme klingt künstlich. Bessere Stimmen: 1) Öffne die App in Microsoft Edge – dort gibt es natürliche Online-Stimmen (z. B. „Xiaoxiao Online (Natural)“). 2) Oder installiere weitere Stimmen unter Windows: Einstellungen → Zeit und Sprache → Sprache & Region → Sprache hinzufügen → „Chinesisch (vereinfacht)“ mit Sprachausgabe. Hinweis: Nicht-chinesische Stimmen können kein Chinesisch sprechen – der Browser nutzt dann automatisch die Standardstimme.",
+        voices_found: "chinesische Stimme(n) gefunden."
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -495,7 +501,11 @@
         paste_story_saved: "Story added to the library!",
         paste_title_label: "Story title:",
         paste_confirm_save: "Save & go to library",
-        paste_cancel_save: "Cancel"
+        paste_cancel_save: "Cancel",
+        translating: "Translating …",
+        open_translator: "Open in Google Translate",
+        voice_hint: "Tip: The default Windows voice sounds artificial. Better voices: 1) Open this app in Microsoft Edge – it offers natural online voices (e.g. “Xiaoxiao Online (Natural)”). 2) Or install more voices in Windows: Settings → Time & Language → Language & Region → Add a language → “Chinese (Simplified)” with text-to-speech. Note: non-Chinese voices cannot speak Chinese – the browser silently falls back to the default voice.",
+        voices_found: "Chinese voice(s) found."
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -547,7 +557,11 @@
         paste_story_saved: "¡Historia añadida a la biblioteca!",
         paste_title_label: "Título de la historia:",
         paste_confirm_save: "Guardar e ir a la biblioteca",
-        paste_cancel_save: "Cancelar"
+        paste_cancel_save: "Cancelar",
+        translating: "Traduciendo …",
+        open_translator: "Abrir en Google Translate",
+        voice_hint: "Consejo: La voz estándar de Windows suena artificial. Mejores voces: 1) Abre esta app en Microsoft Edge – ofrece voces naturales en línea (p. ej. “Xiaoxiao Online (Natural)”). 2) O instala más voces en Windows: Configuración → Hora e idioma → Idioma y región → Agregar un idioma → “Chino (simplificado)” con texto a voz. Nota: las voces no chinas no pueden hablar chino – el navegador usa entonces la voz predeterminada.",
+        voices_found: "voz/voces china(s) encontrada(s)."
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -667,6 +681,59 @@
 
     function isNotFoundMeaning(meaning) {
       return !meaning || meaning === t("not_found") || meaning === "Nicht gefunden." || meaning === "Not found." || meaning === "No encontrado.";
+    }
+
+    // Pinyin für beliebigen Text aus dem Wörterbuch (Longest-Match-Segmentierung)
+    function dictPinyinForText(text) {
+      if (!text) return "";
+      var tokens = segmentText(text, "");
+      var parts = [];
+      for (var i = 0; i < tokens.length; i++) {
+        var w = tokens[i].char || "";
+        if (!w || !isCJKChar(w[0])) continue;
+        var e = DICT[w] || getGeneratedVocabulary()[w];
+        parts.push(e && e.pinyin && e.pinyin !== "?" ? e.pinyin : "?");
+      }
+      return parts.join(" ").trim();
+    }
+
+    // Online-Übersetzungs-Fallback (MyMemory, kostenlos, kein API-Key nötig)
+    var FALLBACK_TRANS_CACHE_KEY = "kanmandarin_fallback_translations";
+    var fallbackTransCache = (function() {
+      try {
+        var raw = localStorage.getItem(FALLBACK_TRANS_CACHE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    })();
+    function fallbackTranslate(text, cb) {
+      if (!text) { cb(""); return; }
+      var lang = getTargetLang();
+      var cacheKey = lang + "|" + text;
+      if (fallbackTransCache[cacheKey]) { cb(fallbackTransCache[cacheKey]); return; }
+      fetch("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text.slice(0, 490)) + "&langpair=zh-CN|" + encodeURIComponent(lang))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var tr = (d && d.responseData && d.responseData.translatedText) || "";
+          if (tr && tr.toUpperCase().indexOf("MYMEMORY WARNING") < 0 && tr.toUpperCase().indexOf("QUERY LENGTH") < 0) {
+            fallbackTransCache[cacheKey] = tr;
+            try { localStorage.setItem(FALLBACK_TRANS_CACHE_KEY, JSON.stringify(fallbackTransCache)); } catch (e) {}
+            cb(tr);
+          } else cb("");
+        })
+        .catch(function() { cb(""); });
+    }
+    function googleTranslateUrl(text) {
+      var lang = getTargetLang();
+      return "https://translate.google.com/?sl=zh-CN&tl=" + encodeURIComponent(lang) + "&text=" + encodeURIComponent(text) + "&op=translate";
+    }
+
+    // Gespeicherte (generierte) Geschichte in localStorage aktualisieren
+    function persistGeneratedStory(story) {
+      if (!story || !story.id) return;
+      var gen = getGeneratedStories();
+      for (var i = 0; i < gen.length; i++) {
+        if (gen[i] && gen[i].id === story.id) { gen[i] = story; saveGeneratedStories(gen); return; }
+      }
     }
 
     var SAVED_WORDS_KEY = "kanmandarin_saved_words";
@@ -866,6 +933,16 @@
           var showAll = getShowAllVoices();
           var allVoices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
           var voices = showAll ? allVoices.slice() : getChineseVoices();
+          var countEl = document.getElementById("settings-voice-count");
+          if (countEl) {
+            var zhCount = 0;
+            for (var ci = 0; ci < allVoices.length; ci++) {
+              var lv = (allVoices[ci].lang || "").toLowerCase();
+              var nv = (allVoices[ci].name || "").toLowerCase();
+              if (lv.indexOf("zh") >= 0 || nv.indexOf("chinese") >= 0) zhCount++;
+            }
+            countEl.textContent = zhCount + " " + t("voices_found");
+          }
           if (showAll && voices.length > 0) {
             voices.sort(function(a, b) {
               var aZh = ((a.lang || "").toLowerCase().indexOf("zh") >= 0 || (a.name || "").toLowerCase().indexOf("chinese") >= 0) ? 0 : 1;
@@ -1239,9 +1316,19 @@
         var wordEsc = (entry.word || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
         var pinyinShow = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (pressedWordState.contextPinyin || "?");
         var pinyinEsc = pinyinShow.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-        var meaningEsc = (getEntryMeaning(entry) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+        var meaning = getEntryMeaning(entry) || "";
+        var meaningEsc = meaning.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
         box.className = "selected-sentence-box";
         box.innerHTML = '<div class="translation-top"><strong>' + wordEsc + '</strong> <span style="font-weight:400;color:#555">' + pinyinEsc + '</span></div><div class="pinyin-top">' + meaningEsc + '</div>';
+        if (isNotFoundMeaning(meaning) && entry.word) {
+          var pressedWord = entry.word;
+          box.querySelector(".pinyin-top").textContent = t("translating");
+          fallbackTranslate(pressedWord, function(tr) {
+            if (!pressedWordState || !pressedWordState.entry || pressedWordState.entry.word !== pressedWord) return;
+            var el = box.querySelector(".pinyin-top");
+            if (el) el.textContent = tr || t("not_found");
+          });
+        }
         return;
       }
 
@@ -1251,10 +1338,31 @@
         return;
       }
       var seg = currentStory.sentences[selectedSentenceIndex];
-      var translation = (getSentenceTranslation(seg) || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-      var pinyin = (seg.pinyin || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      var translationRaw = getSentenceTranslation(seg) || "";
+      var pinyinRaw = seg.pinyin || dictPinyinForText(seg.text || "");
+      var translation = translationRaw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      var pinyin = pinyinRaw.replace(/&/g, "&amp;").replace(/</g, "&lt;");
       box.className = "selected-sentence-box";
-      box.innerHTML = '<div class="translation-top">' + translation + '</div><div class="pinyin-top">' + pinyin + '</div>';
+      box.innerHTML = '<div class="translation-top">' + (translation || t("translating")) + '</div><div class="pinyin-top">' + pinyin + '</div>';
+      if (!translationRaw && seg.text) {
+        var segIdxAtRequest = selectedSentenceIndex;
+        var storyIdAtRequest = currentStory.id;
+        fallbackTranslate(seg.text, function(tr) {
+          if (!tr) {
+            if (currentStory && currentStory.id === storyIdAtRequest && selectedSentenceIndex === segIdxAtRequest && !pressedWordState) {
+              var elT = box.querySelector(".translation-top");
+              if (elT) elT.textContent = t("not_found");
+            }
+            return;
+          }
+          seg["translation_" + getTargetLang()] = tr;
+          if (currentStory && currentStory.id === storyIdAtRequest) persistGeneratedStory(currentStory);
+          if (currentStory && currentStory.id === storyIdAtRequest && selectedSentenceIndex === segIdxAtRequest && !pressedWordState) {
+            var el = box.querySelector(".translation-top");
+            if (el) el.textContent = tr;
+          }
+        });
+      }
     }
 
     function renderReader() {
@@ -1747,24 +1855,44 @@
         var entry = lookup(found.word);
         var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : "";
         var meaning = getEntryMeaning(entry) || "";
+        var meaningKnown = meaning && !isNotFoundMeaning(meaning);
         wordBox.className = "selected-sentence-box";
         wordBox.innerHTML =
           '<div class="translation-top"><strong>' + escapeHtml(entry.word || "") + '</strong>' +
           (pinyin ? ' <span style="font-weight:400;color:#555">' + escapeHtml(pinyin) + '</span>' : '') +
           '</div>' +
-          (meaning && !isNotFoundMeaning(meaning) ? '<div class="pinyin-top">' + escapeHtml(meaning) + '</div>' : '');
+          '<div class="pinyin-top">' + (meaningKnown ? escapeHtml(meaning) : escapeHtml(t("translating"))) + '</div>';
+        if (!meaningKnown && entry.word) {
+          var wordAtRequest = entry.word;
+          fallbackTranslate(wordAtRequest, function(tr) {
+            var strongEl = wordBox.querySelector(".translation-top strong");
+            if (!strongEl || strongEl.textContent !== wordAtRequest) return;
+            var el = wordBox.querySelector(".pinyin-top");
+            if (el) el.textContent = tr || t("not_found");
+          });
+        }
+        var btnRow = document.createElement("div");
+        btnRow.style.cssText = "display:flex;gap:8px;margin-top:6px;flex-wrap:wrap";
         if (window.speechSynthesis) {
           var speakBtn = document.createElement("button");
           speakBtn.textContent = "🔊";
-          speakBtn.style.cssText = "padding:4px 10px;border:none;border-radius:6px;background:#f0f0f0;cursor:pointer;font-size:0.85rem;margin-top:6px";
+          speakBtn.style.cssText = "padding:4px 10px;border:none;border-radius:6px;background:#f0f0f0;cursor:pointer;font-size:0.85rem";
           speakBtn.onclick = function() {
             var u = new SpeechSynthesisUtterance(entry.word);
             u.lang = "zh-CN";
             var v = getSelectedVoice(); if (v) u.voice = v;
             window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
           };
-          wordBox.appendChild(speakBtn);
+          btnRow.appendChild(speakBtn);
         }
+        var gtLink = document.createElement("a");
+        gtLink.textContent = "🌐 " + t("open_translator");
+        gtLink.href = googleTranslateUrl(entry.word || found.word);
+        gtLink.target = "_blank";
+        gtLink.rel = "noopener";
+        gtLink.style.cssText = "padding:4px 10px;border-radius:6px;background:#f0f0f0;font-size:0.85rem;text-decoration:none;color:#333";
+        btnRow.appendChild(gtLink);
+        wordBox.appendChild(btnRow);
       };
 
       wordBox.style.display = "";
@@ -1772,6 +1900,88 @@
       wordBox.textContent = t("paste_click_char");
       if (saveBtn) saveBtn.style.display = "";
       if (saveSection) saveSection.style.display = "none";
+    }
+
+    // KI-Anfrage (gleiche Provider-Logik wie bei der Geschichten-Generierung)
+    function callAIRaw(systemPrompt, userMessage) {
+      var provider = getAIProvider();
+      var apiKey = provider === "gemini" ? getGeminiKey() : getOpenAIKey();
+      if (!apiKey) return Promise.reject(new Error("no-key"));
+      if (provider === "gemini") {
+        return fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [ { text: systemPrompt } ] },
+            contents: [ { parts: [ { text: userMessage } ] } ],
+            generationConfig: { temperature: 0.3 }
+          })
+        }).then(function(res) {
+          return res.json().then(function(data) {
+            if (!res.ok) throw new Error(data.error && data.error.message ? data.error.message : String(res.status));
+            var rawText = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) ? (data.candidates[0].content.parts[0].text || "") : "";
+            return rawText.trim();
+          });
+        });
+      }
+      return fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [ { role: "system", content: systemPrompt }, { role: "user", content: userMessage } ],
+          temperature: 0.3
+        })
+      }).then(function(res) {
+        return res.json().then(function(data) {
+          if (!res.ok) throw new Error(data.error && data.error.message ? data.error.message : String(res.status));
+          return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : "";
+        });
+      });
+    }
+
+    // Eingefügten Text mit KI aufbereiten – analog zur Geschichten-Generierung:
+    // Pinyin + Übersetzung pro Satz und Vokabelliste, Sätze bleiben unverändert.
+    function enrichStoryWithAI(storyId) {
+      var generated = getGeneratedStories();
+      var story = null;
+      for (var i = 0; i < generated.length; i++) {
+        if (generated[i] && generated[i].id === storyId) { story = generated[i]; break; }
+      }
+      if (!story || !story.sentences || !story.sentences.length) return;
+      var targetLang = getTargetLang();
+      var targetLangName = targetLang === "de" ? "German" : (targetLang === "es" ? "Spanish" : "English");
+      var sentenceTexts = story.sentences.map(function(s) { return s.text || ""; });
+      var systemPrompt = "You are a Chinese language assistant. You receive a list of Chinese sentences. Reply with ONLY a valid JSON object, no markdown, no code fence: {\"titlePinyin\":\"...\", \"titleTranslation\":\"...\", \"sentences\":[{\"text\":\"...\", \"pinyin\":\"...\", \"translation\":\"...\"}, ...], \"vocabulary\":[{\"word\":\"...\", \"pinyin\":\"...\", \"meaning\":\"...\", \"hsk\":N}, ...]}. Keep every sentence text EXACTLY as given, same order, same count. pinyin: tone marks, one space between syllables. translation in " + targetLangName + ". vocabulary: ALL distinct words and single characters appearing in the sentences, each with word, pinyin (tone marks), short meaning in " + targetLangName + ", hsk 1-6 (or null if above HSK 6).";
+      var userMessage = "Title: " + (story.title || "") + "\nSentences (JSON array):\n" + JSON.stringify(sentenceTexts);
+      callAIRaw(systemPrompt, userMessage).then(function(raw) {
+        var jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+        var obj = JSON.parse(jsonStr);
+        if (obj.vocabulary && Array.isArray(obj.vocabulary)) mergeGeneratedVocabulary(obj.vocabulary);
+        if (obj.sentences && Array.isArray(obj.sentences)) {
+          for (var i = 0; i < story.sentences.length && i < obj.sentences.length; i++) {
+            var enriched = obj.sentences[i];
+            if (!enriched) continue;
+            if (enriched.pinyin) story.sentences[i].pinyin = enriched.pinyin;
+            if (enriched.translation) {
+              story.sentences[i].translation = enriched.translation;
+              story.sentences[i]["translation_" + targetLang] = enriched.translation;
+            }
+          }
+        }
+        if (obj.titlePinyin) story.titlePinyin = obj.titlePinyin;
+        if (obj.titleTranslation) {
+          story.titleTranslation = obj.titleTranslation;
+          story["titleTranslation_" + targetLang] = obj.titleTranslation;
+        }
+        persistGeneratedStory(story);
+        STORIES = INITIAL_STORIES.concat(getGeneratedStories());
+        // Falls die Geschichte gerade offen ist: neu rendern
+        if (currentStory && currentStory.id === storyId) {
+          currentStory = story;
+          renderReader();
+        }
+      }).catch(function() { /* Ohne API-Key oder bei Fehler bleibt die Wörterbuch-Variante */ });
     }
 
     function confirmSaveTextAsStory() {
@@ -1782,12 +1992,18 @@
       var secsPerSeg = 4;
       var sentences = [];
       for (var i = 0; i < pasteSegments.length; i++) {
-        sentences.push({ start: i * secsPerSeg, end: (i + 1) * secsPerSeg, text: pasteSegments[i], pinyin: "", translation: "" });
+        sentences.push({
+          start: i * secsPerSeg,
+          end: (i + 1) * secsPerSeg,
+          text: pasteSegments[i],
+          pinyin: dictPinyinForText(pasteSegments[i]),
+          translation: ""
+        });
       }
       var story = {
         id: storyId,
         title: title,
-        titlePinyin: "",
+        titlePinyin: dictPinyinForText(title),
         titleTranslation: t("paste_story_label"),
         titleTranslation_de: "(Eigener Text)",
         titleTranslation_es: "(Texto propio)",
@@ -1799,6 +2015,8 @@
       saveGeneratedStories(generated);
       STORIES = INITIAL_STORIES.concat(generated);
       showScreen("library");
+      // Im Hintergrund mit KI aufbereiten (Pinyin, Übersetzungen, Vokabeln) – wie bei der Generierung
+      enrichStoryWithAI(storyId);
     }
 
     function initPasteScreen() {
