@@ -1160,9 +1160,10 @@
             var a = new Audio(url);
             a.onended = function() { URL.revokeObjectURL(url); };
             a.play().catch(function() {});
-          }).catch(function() {
+          }).catch(function(err) {
             aiSampleBtn.disabled = false;
-            alert(t("ai_voice_error"));
+            var detail = (err && err.message && err.message !== "no-key") ? "\n\nDetails: " + err.message : "";
+            alert(t("ai_voice_error") + detail);
           });
         };
       }
@@ -1980,10 +1981,14 @@
       return new Blob([buf], { type: "audio/wav" });
     }
 
-    function generateGeminiTTSBlob(text) {
-      var apiKey = getGeminiKey();
-      if (!apiKey) return Promise.reject(new Error("no-key"));
-      return fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=" + encodeURIComponent(apiKey), {
+    // Modellnamen ändern sich bei Google gelegentlich – Kandidaten der Reihe
+    // nach probieren und den funktionierenden merken
+    var GEMINI_TTS_MODELS = ["gemini-2.5-flash-tts", "gemini-2.5-flash-preview-tts", "gemini-2.5-flash-lite-preview-tts", "gemini-2.5-pro-tts"];
+    var TTS_MODEL_KEY = "kanmandarin_tts_model";
+    function tryTTSModel(models, idx, text, apiKey) {
+      if (idx >= models.length) return Promise.reject(new Error("Kein TTS-Modell verfügbar (alle Modellnamen fehlgeschlagen)."));
+      var model = models[idx];
+      return fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1995,10 +2000,18 @@
         })
       }).then(function(res) {
         return res.json().then(function(data) {
-          if (!res.ok) throw new Error(data.error && data.error.message ? data.error.message : String(res.status));
+          if (!res.ok) {
+            var msg = (data.error && data.error.message) ? data.error.message : String(res.status);
+            // Modell existiert nicht (mehr)? Nächsten Kandidaten probieren.
+            if (res.status === 404 || /not found|is not supported|does not exist/i.test(msg)) {
+              return tryTTSModel(models, idx + 1, text, apiKey);
+            }
+            throw new Error(msg);
+          }
           var part = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0];
           var b64 = part && part.inlineData && part.inlineData.data;
-          if (!b64) throw new Error("no-audio");
+          if (!b64) throw new Error("Antwort enthielt kein Audio.");
+          try { localStorage.setItem(TTS_MODEL_KEY, model); } catch (e) {}
           var rate = 24000;
           var mt = (part.inlineData.mimeType || "");
           var m = mt.match(/rate=(\d+)/);
@@ -2006,6 +2019,17 @@
           return pcmBase64ToWavBlob(b64, rate);
         });
       });
+    }
+    function generateGeminiTTSBlob(text) {
+      var apiKey = getGeminiKey();
+      if (!apiKey) return Promise.reject(new Error("no-key"));
+      var models = GEMINI_TTS_MODELS.slice();
+      var saved = null;
+      try { saved = localStorage.getItem(TTS_MODEL_KEY); } catch (e) {}
+      if (saved) {
+        models = [saved].concat(models.filter(function(m) { return m !== saved; }));
+      }
+      return tryTTSModel(models, 0, text, apiKey);
     }
 
     // Audio holen: erst Cache, sonst generieren und cachen
