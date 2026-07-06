@@ -776,6 +776,38 @@
     function fallbackTranslate(text, cb) {
       translateOnline(text, "zh-CN", cb);
     }
+    function hasAIKey() {
+      var p = getAIProvider();
+      return !!(p === "gemini" ? getGeminiKey() : getOpenAIKey());
+    }
+    // KI-Übersetzung (Gemini/OpenAI) mit dauerhaftem Cache; bei Fehler oder
+    // fehlendem API-Key automatisch MyMemory als Fallback
+    function aiTranslate(text, sourceLang, cb) {
+      var lang = getTargetLang();
+      var cacheKey = "ai|" + sourceLang + ">" + lang + "|" + text;
+      if (fallbackTransCache[cacheKey]) { cb(fallbackTransCache[cacheKey]); return; }
+      var langName = lang === "de" ? "German" : (lang === "es" ? "Spanish" : "English");
+      var system;
+      if (sourceLang === "en") {
+        system = "You translate English dictionary glosses into " + langName + ". Keep the structure (senses separated by semicolons), use dictionary style (verbs as bare infinitive, e.g. 'lieben; moegen' not 'zu lieben'), concise and natural. Reply with ONLY the translated gloss, no quotes, no explanations.";
+      } else {
+        system = "You translate Chinese into " + langName + ". Reply with ONLY the translation - natural and concise, no pinyin, no quotes, no explanations.";
+      }
+      callAIRaw(system, text).then(function(raw) {
+        var tr = (raw || "").trim().replace(/^["“”']+|["“”']+$/g, "");
+        if (!tr) throw new Error("empty");
+        fallbackTransCache[cacheKey] = tr;
+        try { localStorage.setItem(FALLBACK_TRANS_CACHE_KEY, JSON.stringify(fallbackTransCache)); } catch (e) {}
+        cb(tr);
+      }).catch(function() {
+        translateOnline(text, sourceLang, cb);
+      });
+    }
+    // Beste verfügbare Übersetzung: KI wenn Key vorhanden, sonst MyMemory
+    function smartTranslate(text, sourceLang, cb) {
+      if (hasAIKey()) aiTranslate(text, sourceLang, cb);
+      else translateOnline(text, sourceLang, cb);
+    }
     // Prüft, ob die Bedeutung aus dem (englischen) HSK-Wörterbuch stammt und
     // für die aktuelle Zielsprache noch übersetzt werden sollte
     function needsMeaningLocalization(entry) {
@@ -1482,7 +1514,7 @@
         if ((isNotFoundMeaning(meaning) || isUnhelpfulMeaning(meaning)) && entry.word) {
           var pressedWord = entry.word;
           box.querySelector(".pinyin-top").textContent = t("translating");
-          fallbackTranslate(pressedWord, function(tr) {
+          smartTranslate(pressedWord, "zh-CN", function(tr) {
             if (!pressedWordState || !pressedWordState.entry || pressedWordState.entry.word !== pressedWord) return;
             var el = box.querySelector(".pinyin-top");
             if (el) el.textContent = tr || t("not_found");
@@ -1490,7 +1522,7 @@
         } else if (needsMeaningLocalization(entry) && meaning) {
           // Englische Wörterbuch-Bedeutung in die Zielsprache übersetzen
           var pressedWord2 = entry.word;
-          translateOnline(meaning, "en", function(tr) {
+          smartTranslate(meaning, "en", function(tr) {
             if (!tr || !pressedWordState || !pressedWordState.entry || pressedWordState.entry.word !== pressedWord2) return;
             var el = box.querySelector(".pinyin-top");
             if (el) el.textContent = tr;
@@ -1514,7 +1546,7 @@
       if (!translationRaw && seg.text) {
         var segIdxAtRequest = selectedSentenceIndex;
         var storyIdAtRequest = currentStory.id;
-        fallbackTranslate(seg.text, function(tr) {
+        smartTranslate(seg.text, "zh-CN", function(tr) {
           if (!tr) {
             if (currentStory && currentStory.id === storyIdAtRequest && selectedSentenceIndex === segIdxAtRequest && !pressedWordState) {
               var elT = box.querySelector(".translation-top");
@@ -2091,7 +2123,7 @@
           '<div class="pinyin-top">' + (meaningKnown ? escapeHtml(meaning) : escapeHtml(t("translating"))) + '</div>';
         if (!meaningKnown && entry.word) {
           var wordAtRequest = entry.word;
-          fallbackTranslate(wordAtRequest, function(tr) {
+          smartTranslate(wordAtRequest, "zh-CN", function(tr) {
             var strongEl = wordBox.querySelector(".translation-top strong");
             if (!strongEl || strongEl.textContent !== wordAtRequest) return;
             var el = wordBox.querySelector(".pinyin-top");
@@ -2100,7 +2132,7 @@
         } else if (meaningKnown && needsMeaningLocalization(entry)) {
           // Englische Wörterbuch-Bedeutung in die Zielsprache übersetzen
           var wordAtReq2 = entry.word;
-          translateOnline(meaning, "en", function(tr) {
+          smartTranslate(meaning, "en", function(tr) {
             if (!tr) return;
             var strongEl2 = wordBox.querySelector(".translation-top strong");
             if (!strongEl2 || strongEl2.textContent !== wordAtReq2) return;
