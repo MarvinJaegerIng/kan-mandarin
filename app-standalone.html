@@ -233,6 +233,18 @@
             <input type="password" id="setting-openai-key" placeholder="sk-...">
           </div>
           <div class="settings-row" style="margin-top: 24px;">
+            <div style="padding: 12px; background: #eefaf0; border: 1px solid #bfe5c8; border-radius: 10px; margin-bottom: 16px;">
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                <input type="checkbox" id="setting-ai-tts">
+                <span data-i18n="settings_ai_tts">✨ KI-Stimme (Gemini) verwenden – natürlicher Klang</span>
+              </label>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                <label for="setting-ai-voice" data-i18n="settings_ai_voice">KI-Stimme:</label>
+                <select id="setting-ai-voice"></select>
+                <button type="button" class="btn btn-secondary" id="ai-voice-sample-btn" data-i18n="voice_sample" style="padding:4px 12px">Hörprobe</button>
+              </div>
+              <p class="muted" style="font-size: 0.8rem; margin: 8px 0 0 0;" data-i18n="settings_ai_tts_hint">Benötigt den Gemini API-Schlüssel (oben). Das Audio wird pro Satz einmal erzeugt und dauerhaft im Browser zwischengespeichert. Im Gratis-Kontingent ist die Anzahl pro Tag begrenzt – ist es aufgebraucht, springt automatisch die Browser-Stimme ein.</p>
+            </div>
             <label data-i18n="settings_voice">Stimme für Vorlesen (Audio)</label>
             <p class="muted" style="font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings_voice_desc">Chinesische Stimmen deines Systems. Klicke auf „Hörprobe“ für eine kurze Ansage.</p>
             <p class="muted" style="font-size: 0.8rem; margin: 8px 0 0 0; padding: 8px 10px; background: #fffbe6; border: 1px solid #f0e6b3; border-radius: 8px;" data-i18n="voice_hint">Tipp: Die Standard-Windows-Stimme klingt künstlich. Bessere Stimmen: 1) Öffne die App in Microsoft Edge – dort gibt es natürliche Online-Stimmen (z. B. „Xiaoxiao Online (Natural)“). 2) Oder installiere weitere Stimmen unter Windows: Einstellungen → Zeit und Sprache → Sprache &amp; Region → Sprache hinzufügen → „Chinesisch (vereinfacht)“ mit Sprachausgabe. Hinweis: Nicht-chinesische Stimmen können kein Chinesisch sprechen – der Browser nutzt dann automatisch die Standardstimme.</p>
@@ -473,7 +485,11 @@
         stats_numbers_correct: "Zahlen richtig",
         stats_numbers_of: "von",
         stats_reset: "Statistik zurücksetzen",
-        stats_reset_confirm: "Statistik wirklich zurücksetzen? Gespeicherte Wörter und Geschichten bleiben erhalten."
+        stats_reset_confirm: "Statistik wirklich zurücksetzen? Gespeicherte Wörter und Geschichten bleiben erhalten.",
+        settings_ai_tts: "✨ KI-Stimme (Gemini) verwenden – natürlicher Klang",
+        settings_ai_voice: "KI-Stimme:",
+        settings_ai_tts_hint: "Benötigt den Gemini API-Schlüssel (oben). Das Audio wird pro Satz einmal erzeugt und dauerhaft im Browser zwischengespeichert. Im Gratis-Kontingent ist die Anzahl pro Tag begrenzt – ist es aufgebraucht, springt automatisch die Browser-Stimme ein.",
+        ai_voice_error: "KI-Stimme nicht verfügbar. Bitte Gemini API-Schlüssel prüfen (Kontingent evtl. aufgebraucht)."
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -542,7 +558,11 @@
         stats_numbers_correct: "Numbers correct",
         stats_numbers_of: "of",
         stats_reset: "Reset statistics",
-        stats_reset_confirm: "Really reset statistics? Saved words and stories are kept."
+        stats_reset_confirm: "Really reset statistics? Saved words and stories are kept.",
+        settings_ai_tts: "✨ Use AI voice (Gemini) – natural sound",
+        settings_ai_voice: "AI voice:",
+        settings_ai_tts_hint: "Requires the Gemini API key (above). Audio is generated once per sentence and cached permanently in your browser. The free tier has a daily limit – once exhausted, the browser voice takes over automatically.",
+        ai_voice_error: "AI voice unavailable. Please check your Gemini API key (quota may be exhausted)."
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -611,7 +631,11 @@
         stats_numbers_correct: "Números correctos",
         stats_numbers_of: "de",
         stats_reset: "Restablecer estadísticas",
-        stats_reset_confirm: "¿Restablecer las estadísticas? Las palabras e historias guardadas se conservan."
+        stats_reset_confirm: "¿Restablecer las estadísticas? Las palabras e historias guardadas se conservan.",
+        settings_ai_tts: "✨ Usar voz de IA (Gemini) – sonido natural",
+        settings_ai_voice: "Voz de IA:",
+        settings_ai_tts_hint: "Requiere la clave API de Gemini (arriba). El audio se genera una vez por oración y se guarda permanentemente en el navegador. El nivel gratuito tiene un límite diario – al agotarse, la voz del navegador toma el relevo automáticamente.",
+        ai_voice_error: "Voz de IA no disponible. Revisa tu clave API de Gemini (la cuota puede estar agotada)."
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -1108,6 +1132,39 @@
       if (geminiInput) {
         geminiInput.value = getGeminiKey();
         geminiInput.onchange = geminiInput.onblur = function() { setGeminiKey(geminiInput.value); };
+      }
+      var aiTtsCb = document.getElementById("setting-ai-tts");
+      var aiVoiceSel = document.getElementById("setting-ai-voice");
+      var aiSampleBtn = document.getElementById("ai-voice-sample-btn");
+      if (aiTtsCb) {
+        aiTtsCb.checked = getUseAITTS();
+        aiTtsCb.onchange = function() { setUseAITTS(aiTtsCb.checked); };
+      }
+      if (aiVoiceSel) {
+        aiVoiceSel.innerHTML = "";
+        for (var vi = 0; vi < GEMINI_TTS_VOICES.length; vi++) {
+          var vopt = document.createElement("option");
+          vopt.value = GEMINI_TTS_VOICES[vi];
+          vopt.textContent = GEMINI_TTS_VOICES[vi];
+          if (GEMINI_TTS_VOICES[vi] === getAITTSVoice()) vopt.selected = true;
+          aiVoiceSel.appendChild(vopt);
+        }
+        aiVoiceSel.onchange = function() { setAITTSVoice(aiVoiceSel.value); };
+      }
+      if (aiSampleBtn) {
+        aiSampleBtn.onclick = function() {
+          aiSampleBtn.disabled = true;
+          getTTSAudioBlob(SAMPLE_TEXT).then(function(blob) {
+            aiSampleBtn.disabled = false;
+            var url = URL.createObjectURL(blob);
+            var a = new Audio(url);
+            a.onended = function() { URL.revokeObjectURL(url); };
+            a.play().catch(function() {});
+          }).catch(function() {
+            aiSampleBtn.disabled = false;
+            alert(t("ai_voice_error"));
+          });
+        };
       }
       var voiceListEl = document.getElementById("settings-voice-list");
       if (voiceListEl) {
@@ -1652,9 +1709,13 @@
         updateTimeDisplay();
         updateHighlight();
         if (audioEl) audioEl.currentTime = currentTime;
-        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+        if (ttsPlaying) {
           ttsSession++;
-          window.speechSynthesis.cancel();
+          ttsPlaying = false;
+          if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+          if (aiAudioEl) { try { aiAudioEl.pause(); } catch (e) {} aiAudioEl = null; }
+          if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+          setCurrentReadingChar(-1, -1);
           var pb = document.querySelector("#play-btn");
           if (pb) pb.textContent = "▶";
         }
@@ -1846,12 +1907,167 @@
     // Utterances (z. B. onend nach cancel()) erkennen daran, dass sie
     // nicht weiterlesen dürfen.
     var ttsSession = 0;
+    var ttsPlaying = false;
+    var aiAudioEl = null;
+
+    // ── KI-Stimme (Gemini TTS) ──────────────────────────────────────────
+    var AI_TTS_KEY = "kanmandarin_ai_tts";
+    var AI_TTS_VOICE_KEY = "kanmandarin_ai_tts_voice";
+    var GEMINI_TTS_VOICES = ["Kore", "Puck", "Zephyr", "Charon", "Leda", "Fenrir", "Aoede", "Orus", "Callirrhoe", "Enceladus"];
+    function getUseAITTS() {
+      try { return localStorage.getItem(AI_TTS_KEY) === "1"; } catch (e) { return false; }
+    }
+    function setUseAITTS(v) {
+      try { localStorage.setItem(AI_TTS_KEY, v ? "1" : "0"); } catch (e) {}
+    }
+    function getAITTSVoice() {
+      try { return localStorage.getItem(AI_TTS_VOICE_KEY) || "Kore"; } catch (e) { return "Kore"; }
+    }
+    function setAITTSVoice(v) {
+      try { localStorage.setItem(AI_TTS_VOICE_KEY, v || "Kore"); } catch (e) {}
+    }
+    function aiTTSAvailable() {
+      return getUseAITTS() && !!getGeminiKey();
+    }
+
+    // Audio-Cache in IndexedDB (localStorage ist für Audio zu klein)
+    var ttsDBPromise = null;
+    function openTTSDB() {
+      if (ttsDBPromise) return ttsDBPromise;
+      ttsDBPromise = new Promise(function(resolve) {
+        try {
+          var req = indexedDB.open("kanmandarin-tts", 1);
+          req.onupgradeneeded = function() { req.result.createObjectStore("audio"); };
+          req.onsuccess = function() { resolve(req.result); };
+          req.onerror = function() { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+      return ttsDBPromise;
+    }
+    function ttsCacheGet(key) {
+      return openTTSDB().then(function(db) {
+        if (!db) return null;
+        return new Promise(function(resolve) {
+          try {
+            var rq = db.transaction("audio", "readonly").objectStore("audio").get(key);
+            rq.onsuccess = function() { resolve(rq.result || null); };
+            rq.onerror = function() { resolve(null); };
+          } catch (e) { resolve(null); }
+        });
+      });
+    }
+    function ttsCachePut(key, blob) {
+      openTTSDB().then(function(db) {
+        if (!db) return;
+        try { db.transaction("audio", "readwrite").objectStore("audio").put(blob, key); } catch (e) {}
+      });
+    }
+
+    // Gemini liefert rohes PCM (16 Bit, mono) – in WAV verpacken, damit
+    // ein <audio>-Element es abspielen kann
+    function pcmBase64ToWavBlob(b64, sampleRate) {
+      var bin = atob(b64);
+      var n = bin.length;
+      var buf = new ArrayBuffer(44 + n);
+      var dv = new DataView(buf);
+      function wstr(off, s) { for (var i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); }
+      wstr(0, "RIFF"); dv.setUint32(4, 36 + n, true); wstr(8, "WAVE");
+      wstr(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+      dv.setUint32(24, sampleRate, true); dv.setUint32(28, sampleRate * 2, true);
+      dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+      wstr(36, "data"); dv.setUint32(40, n, true);
+      for (var j = 0; j < n; j++) dv.setUint8(44 + j, bin.charCodeAt(j));
+      return new Blob([buf], { type: "audio/wav" });
+    }
+
+    function generateGeminiTTSBlob(text) {
+      var apiKey = getGeminiKey();
+      if (!apiKey) return Promise.reject(new Error("no-key"));
+      return fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=" + encodeURIComponent(apiKey), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [ { parts: [ { text: text } ] } ],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: getAITTSVoice() } } }
+          }
+        })
+      }).then(function(res) {
+        return res.json().then(function(data) {
+          if (!res.ok) throw new Error(data.error && data.error.message ? data.error.message : String(res.status));
+          var part = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0];
+          var b64 = part && part.inlineData && part.inlineData.data;
+          if (!b64) throw new Error("no-audio");
+          var rate = 24000;
+          var mt = (part.inlineData.mimeType || "");
+          var m = mt.match(/rate=(\d+)/);
+          if (m) rate = parseInt(m[1], 10);
+          return pcmBase64ToWavBlob(b64, rate);
+        });
+      });
+    }
+
+    // Audio holen: erst Cache, sonst generieren und cachen
+    function getTTSAudioBlob(text) {
+      var cacheKey = getAITTSVoice() + "|" + text;
+      return ttsCacheGet(cacheKey).then(function(blob) {
+        if (blob) return blob;
+        return generateGeminiTTSBlob(text).then(function(b) {
+          ttsCachePut(cacheKey, b);
+          return b;
+        });
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Wort-Bereiche für die Hervorhebung (ganzes Wort statt einzelnes Zeichen)
+    function computeTokenRanges(text, pinyin) {
+      var tokens = segmentText(text, pinyin || "");
+      var ranges = [];
+      var pos = 0;
+      for (var ti = 0; ti < tokens.length; ti++) {
+        var tw = tokens[ti].char || "";
+        ranges.push({ start: pos, end: pos + tw.length, cjk: tw.length > 0 && isCJKChar(tw[0]) });
+        pos += tw.length;
+      }
+      return ranges;
+    }
+    function highlightTokenAtChar(sentIdx, tokenRanges, ci) {
+      for (var r = 0; r < tokenRanges.length; r++) {
+        if (ci < tokenRanges[r].end) {
+          // Satzzeichen überspringen: nächstes CJK-Token nehmen
+          var rr = r;
+          while (rr < tokenRanges.length && !tokenRanges[rr].cjk) rr++;
+          if (rr < tokenRanges.length) setCurrentReadingRange(sentIdx, tokenRanges[rr].start, tokenRanges[rr].end);
+          return;
+        }
+      }
+    }
+
+    // Nach einem fertig gesprochenen Satz: Zeit fortschreiben und weiter
+    function ttsAdvance(session, seg, countStat) {
+      if (session !== ttsSession) return;
+      if (countStat) bumpStat("sentencesHeard");
+      currentTime = seg.end;
+      updateTimeDisplay();
+      updateHighlight();
+      ttsSentenceIndex++;
+      if (currentStory && currentStory.sentences && ttsSentenceIndex < currentStory.sentences.length) {
+        speakNextSentence();
+      } else {
+        ttsPlaying = false;
+        var btn = document.querySelector("#play-btn");
+        if (btn) btn.textContent = "▶";
+      }
+    }
 
     function speakNextSentence() {
-      if (!currentStory || !currentStory.sentences || !window.speechSynthesis) return;
+      if (!currentStory || !currentStory.sentences) return;
       var session = ttsSession;
       var sentences = currentStory.sentences;
       if (ttsSentenceIndex >= sentences.length) {
+        ttsPlaying = false;
         var btn = document.querySelector("#play-btn");
         if (btn) btn.textContent = "▶";
         return;
@@ -1864,26 +2080,85 @@
         speakNextSentence();
         return;
       }
-      // Wort-Bereiche für die Hervorhebung (ganzes Wort statt einzelnes Zeichen)
-      var tokens = segmentText(textToSpeak, seg.pinyin || "");
-      var tokenRanges = [];
-      var tPos = 0;
-      for (var ti = 0; ti < tokens.length; ti++) {
-        var tw = tokens[ti].char || "";
-        tokenRanges.push({ start: tPos, end: tPos + tw.length, cjk: tw.length > 0 && isCJKChar(tw[0]) });
-        tPos += tw.length;
+      if (aiTTSAvailable()) {
+        aiSpeakSentence(session, seg, sentIdx, textToSpeak);
+      } else {
+        browserSpeakSentence(session, seg, sentIdx, textToSpeak);
       }
-      function highlightAtChar(ci) {
-        for (var r = 0; r < tokenRanges.length; r++) {
-          if (ci < tokenRanges[r].end) {
-            // Satzzeichen überspringen: nächstes CJK-Token nehmen
-            var rr = r;
-            while (rr < tokenRanges.length && !tokenRanges[rr].cjk) rr++;
-            if (rr < tokenRanges.length) setCurrentReadingRange(sentIdx, tokenRanges[rr].start, tokenRanges[rr].end);
-            return;
-          }
+    }
+
+    // KI-Stimme: Audio abspielen, Markierung über die ECHTE Audiodauer verteilen
+    function aiSpeakSentence(session, seg, sentIdx, textToSpeak) {
+      var tokenRanges = computeTokenRanges(textToSpeak, seg.pinyin);
+      getTTSAudioBlob(textToSpeak).then(function(blob) {
+        if (session !== ttsSession) return;
+        var url = URL.createObjectURL(blob);
+        var a = new Audio(url);
+        aiAudioEl = a;
+        a.playbackRate = playbackSpeed;
+        a.onplay = function() {
+          if (session !== ttsSession) return;
+          currentSegmentIndex = sentIdx;
+          currentTime = seg.start;
+          updateTimeDisplay();
+          updateHighlight();
+          if (readingCharInterval) clearInterval(readingCharInterval);
+          readingCharInterval = setInterval(function() {
+            if (session !== ttsSession) {
+              clearInterval(readingCharInterval); readingCharInterval = null;
+              return;
+            }
+            var d = a.duration;
+            if (!d || !isFinite(d) || d <= 0) return;
+            var frac = Math.min(a.currentTime / d, 0.999);
+            var ci = Math.floor(frac * textToSpeak.length);
+            highlightTokenAtChar(sentIdx, tokenRanges, ci);
+          }, 50);
+        };
+        var finished = false; // onended UND onerror können beide feuern – nur einmal reagieren
+        a.onended = function() {
+          if (finished) return;
+          finished = true;
+          URL.revokeObjectURL(url);
+          aiAudioEl = null;
+          if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+          setCurrentReadingChar(-1, -1);
+          ttsAdvance(session, seg, true);
+        };
+        a.onerror = function() {
+          if (finished) return;
+          finished = true;
+          URL.revokeObjectURL(url);
+          aiAudioEl = null;
+          if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+          setCurrentReadingChar(-1, -1);
+          if (session !== ttsSession) return;
+          browserSpeakSentence(session, seg, sentIdx, textToSpeak);
+        };
+        a.play().catch(function() {
+          if (finished) return;
+          finished = true;
+          aiAudioEl = null;
+          if (session !== ttsSession) return;
+          browserSpeakSentence(session, seg, sentIdx, textToSpeak);
+        });
+        // Nächsten Satz schon im Hintergrund generieren (weniger Wartezeit)
+        var next = currentStory && currentStory.sentences && currentStory.sentences[sentIdx + 1];
+        if (next && next.text && next.text.trim()) {
+          getTTSAudioBlob(next.text.trim()).catch(function() {});
         }
-      }
+      }).catch(function() {
+        // Kontingent erschöpft / Netzwerkfehler → Browser-Stimme für diesen Satz
+        if (session !== ttsSession) return;
+        browserSpeakSentence(session, seg, sentIdx, textToSpeak);
+      });
+    }
+
+    // Browser-Stimme (speechSynthesis) – bisheriger Weg
+    function browserSpeakSentence(session, seg, sentIdx, textToSpeak) {
+      if (!window.speechSynthesis) { ttsAdvance(session, seg, false); return; }
+      var tokenRanges = computeTokenRanges(textToSpeak, seg.pinyin);
+      function highlightAtChar(ci) { highlightTokenAtChar(sentIdx, tokenRanges, ci); }
       if (window.speechSynthesis.resume) window.speechSynthesis.resume();
       var u = new SpeechSynthesisUtterance(textToSpeak);
       u.lang = "zh-CN";
@@ -1930,29 +2205,20 @@
           }, 200);
         }
       };
+      var finished = false; // onend UND onerror können beide feuern – nur einmal weiterschalten
       u.onend = function() {
+        if (finished) return;
+        finished = true;
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
-        if (session !== ttsSession) return; // gestoppt – nicht weiterlesen
-        bumpStat("sentencesHeard");
-        currentTime = seg.end;
-        updateTimeDisplay();
-        updateHighlight();
-        ttsSentenceIndex++;
-        if (ttsSentenceIndex < sentences.length) {
-          speakNextSentence();
-        } else {
-          var btn = document.querySelector("#play-btn");
-          if (btn) btn.textContent = "▶";
-        }
+        ttsAdvance(session, seg, true);
       };
       u.onerror = function() {
+        if (finished) return;
+        finished = true;
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
-        if (session !== ttsSession) return; // gestoppt – nicht weiterlesen
-        ttsSentenceIndex++;
-        if (ttsSentenceIndex < sentences.length) speakNextSentence();
-        else { var btn = document.querySelector("#play-btn"); if (btn) btn.textContent = "▶"; }
+        ttsAdvance(session, seg, false);
       };
       window.speechSynthesis.speak(u);
     }
@@ -1971,9 +2237,13 @@
         }
         return;
       }
-      if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
-        ttsSession++; // alte Utterance-Callbacks entwerten, sonst liest onend weiter
-        window.speechSynthesis.cancel();
+      if (ttsPlaying) {
+        // Einheitlicher Stopp: deckt Browser-Stimme, KI-Audio und die
+        // Ladephase (Audio wird gerade generiert) ab
+        ttsSession++; // alte Callbacks entwerten, sonst liest onend weiter
+        ttsPlaying = false;
+        if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+        if (aiAudioEl) { try { aiAudioEl.pause(); } catch (e) {} aiAudioEl = null; }
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
         if (currentStory && currentStory.sentences && ttsSentenceIndex < currentStory.sentences.length) {
@@ -1991,13 +2261,15 @@
         return;
       }
       if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
-      if (!window.speechSynthesis) {
+      if (!window.speechSynthesis && !aiTTSAvailable()) {
         if (playBtn) playBtn.textContent = "▶";
         alert(getAudioUnavailableMessage());
         return;
       }
-      window.speechSynthesis.getVoices();
-      if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+      }
       var sentences = currentStory.sentences;
       for (var i = 0; i < sentences.length; i++) {
         if (currentTime >= sentences[i].start && currentTime < sentences[i].end) {
@@ -2013,6 +2285,7 @@
       if (ttsSentenceIndex >= sentences.length) ttsSentenceIndex = 0;
       if (playBtn) playBtn.textContent = "⏸";
       ttsSession++;
+      ttsPlaying = true;
       speakNextSentence();
     }
 
@@ -2022,7 +2295,9 @@
       if (playInterval) { clearInterval(playInterval); playInterval = null; }
       if (audioEl) { try { audioEl.pause(); } catch (e) {} audioEl = null; }
       ttsSession++;
+      ttsPlaying = false;
       if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+      if (aiAudioEl) { try { aiAudioEl.pause(); } catch (e) {} aiAudioEl = null; }
       if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
       document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
       document.getElementById("screen-" + screenId).classList.add("active");
