@@ -1725,7 +1725,10 @@
           span.addEventListener("mousedown", handlePressStart);
           span.addEventListener("touchstart", handlePressStart, { passive: true });
           span.addEventListener("mouseup", release);
-          span.addEventListener("mouseleave", release);
+          // Kein mouseleave: Wenn die Wortbox nachträglich höher wird (asynchrone
+          // Übersetzung), verschiebt sich der Text unter dem Zeiger und mouseleave
+          // würde die Anzeige sofort wieder schließen. Loslassen wird global
+          // über document mouseup erkannt.
           span.addEventListener("touchend", release);
           span.addEventListener("touchcancel", release);
           // Beim Scrollen (Finger bewegt sich) Wortanzeige schließen
