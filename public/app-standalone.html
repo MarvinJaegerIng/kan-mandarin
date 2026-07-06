@@ -755,12 +755,13 @@
         return raw ? JSON.parse(raw) : {};
       } catch (e) { return {}; }
     })();
-    function fallbackTranslate(text, cb) {
+    function translateOnline(text, sourceLang, cb) {
       if (!text) { cb(""); return; }
       var lang = getTargetLang();
-      var cacheKey = lang + "|" + text;
+      if ((sourceLang || "").split("-")[0] === lang) { cb(""); return; }
+      var cacheKey = sourceLang + ">" + lang + "|" + text;
       if (fallbackTransCache[cacheKey]) { cb(fallbackTransCache[cacheKey]); return; }
-      fetch("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text.slice(0, 490)) + "&langpair=zh-CN|" + encodeURIComponent(lang))
+      fetch("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text.slice(0, 490)) + "&langpair=" + encodeURIComponent(sourceLang) + "|" + encodeURIComponent(lang))
         .then(function(r) { return r.json(); })
         .then(function(d) {
           var tr = (d && d.responseData && d.responseData.translatedText) || "";
@@ -771,6 +772,19 @@
           } else cb("");
         })
         .catch(function() { cb(""); });
+    }
+    function fallbackTranslate(text, cb) {
+      translateOnline(text, "zh-CN", cb);
+    }
+    // Prüft, ob die Bedeutung aus dem (englischen) HSK-Wörterbuch stammt und
+    // für die aktuelle Zielsprache noch übersetzt werden sollte
+    function needsMeaningLocalization(entry) {
+      var lang = getTargetLang();
+      if (lang === "en") return false;
+      if (!entry || !entry.word) return false;
+      if (entry["meaning_" + lang]) return false;
+      // Nur Original-Wörterbucheinträge: KI-Vokabeln sind schon in der Zielsprache
+      return DICT[entry.word] === entry;
     }
     function googleTranslateUrl(text) {
       var lang = getTargetLang();
@@ -1473,6 +1487,14 @@
             var el = box.querySelector(".pinyin-top");
             if (el) el.textContent = tr || t("not_found");
           });
+        } else if (needsMeaningLocalization(entry) && meaning) {
+          // Englische Wörterbuch-Bedeutung in die Zielsprache übersetzen
+          var pressedWord2 = entry.word;
+          translateOnline(meaning, "en", function(tr) {
+            if (!tr || !pressedWordState || !pressedWordState.entry || pressedWordState.entry.word !== pressedWord2) return;
+            var el = box.querySelector(".pinyin-top");
+            if (el) el.textContent = tr;
+          });
         }
         return;
       }
@@ -2074,6 +2096,16 @@
             if (!strongEl || strongEl.textContent !== wordAtRequest) return;
             var el = wordBox.querySelector(".pinyin-top");
             if (el) el.textContent = tr || t("not_found");
+          });
+        } else if (meaningKnown && needsMeaningLocalization(entry)) {
+          // Englische Wörterbuch-Bedeutung in die Zielsprache übersetzen
+          var wordAtReq2 = entry.word;
+          translateOnline(meaning, "en", function(tr) {
+            if (!tr) return;
+            var strongEl2 = wordBox.querySelector(".translation-top strong");
+            if (!strongEl2 || strongEl2.textContent !== wordAtReq2) return;
+            var el2 = wordBox.querySelector(".pinyin-top");
+            if (el2) el2.textContent = tr;
           });
         }
         var btnRow = document.createElement("div");
