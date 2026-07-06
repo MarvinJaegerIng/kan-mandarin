@@ -1992,7 +1992,10 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [ { parts: [ { text: text } ] } ],
+          // Explizite Vorlese-Anweisung: ohne sie versucht das TTS-Modell bei
+          // manchen Texten zu ANTWORTEN statt vorzulesen ("model tried to
+          // generate text"). Die Anweisung selbst wird nicht mitgesprochen.
+          contents: [ { parts: [ { text: "Read aloud the following Chinese text exactly as written, in natural Mandarin: " + text } ] } ],
           generationConfig: {
             responseModalities: ["AUDIO"],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: getAITTSVoice() } } }
