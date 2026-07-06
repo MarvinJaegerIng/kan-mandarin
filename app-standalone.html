@@ -46,7 +46,11 @@
     .sentence.highlight { background: rgba(37, 99, 235, 0.08); outline: 1px solid rgba(37, 99, 235, 0.2); }
     .sentence.selected { background: rgba(37, 99, 235, 0.12); outline: 1px solid rgba(37, 99, 235, 0.3); }
     .sentence .chars { font-size: 1.5rem; line-height: 1.8; }
-    .sentence .chars span.char { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 1.15em; min-width: 1.15em; padding: 2px 0; border-radius: 4px; color: #1a1a1a; transition: color 0.1s ease; }
+    .sentence .chars span.char { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 1.15em; min-width: 1.15em; padding: 2px 0; border-radius: 4px; color: #1a1a1a; transition: color 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .stat-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; color: #2563eb; }
+    .stat-label { font-size: 0.8rem; color: #666; margin-top: 4px; }
     .sentence .chars span.char:hover { background: rgba(37, 99, 235, 0.15); }
     .sentence .chars span.char.char-reading { color: #2563eb; font-weight: 600; }
     .sentence .chars span.char.char-pressed { background: rgba(37, 99, 235, 0.22); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25); }
@@ -139,6 +143,7 @@
       <a href="#" class="nav-link" data-screen="new-story">✨ <span data-i18n="nav_new_story">Neue Geschichte</span></a>
       <a href="#" class="nav-link" data-screen="paste">📖 <span data-i18n="nav_paste">Text lesen</span></a>
       <a href="#" class="nav-link" data-screen="numbers">🔢 <span data-i18n="nav_numbers">Zahlentrainer</span></a>
+      <a href="#" class="nav-link" data-screen="stats">📊 <span data-i18n="nav_stats">Statistik</span></a>
       <a href="#" class="nav-link" data-screen="settings">⚙️ <span data-i18n="nav_settings">Einstellungen</span></a>
     </aside>
     <div class="main">
@@ -291,6 +296,12 @@
             </div>
             <div class="nt-score" id="nt-score"></div>
           </div>
+        </div>
+        <div id="screen-stats" class="screen">
+          <h1 class="page-title" data-i18n="stats_title">Lernstatistik</h1>
+          <p class="muted" data-i18n="stats_desc">Dein Lernfortschritt – alles wird nur lokal in deinem Browser gespeichert.</p>
+          <div id="stats-content"></div>
+          <button class="btn btn-secondary" id="stats-reset-btn" data-i18n="stats_reset" style="margin-top:20px">Statistik zurücksetzen</button>
         </div>
         <div id="screen-reader" class="screen"></div>
       </div>
@@ -449,7 +460,20 @@
         translating: "Übersetze …",
         open_translator: "Im Google Übersetzer öffnen",
         voice_hint: "Tipp: Die Standard-Windows-Stimme klingt künstlich. Bessere Stimmen: 1) Öffne die App in Microsoft Edge – dort gibt es natürliche Online-Stimmen (z. B. „Xiaoxiao Online (Natural)“). 2) Oder installiere weitere Stimmen unter Windows: Einstellungen → Zeit und Sprache → Sprache & Region → Sprache hinzufügen → „Chinesisch (vereinfacht)“ mit Sprachausgabe. Hinweis: Nicht-chinesische Stimmen können kein Chinesisch sprechen – der Browser nutzt dann automatisch die Standardstimme.",
-        voices_found: "chinesische Stimme(n) gefunden."
+        voices_found: "chinesische Stimme(n) gefunden.",
+        nav_stats: "Statistik",
+        stats_title: "Lernstatistik",
+        stats_desc: "Dein Lernfortschritt – alles wird nur lokal in deinem Browser gespeichert.",
+        stats_streak: "Tage in Folge aktiv",
+        stats_active_days: "Aktive Tage insgesamt",
+        stats_stories_read: "Geschichten gelesen",
+        stats_sentences_heard: "Sätze angehört",
+        stats_word_lookups: "Wörter nachgeschlagen",
+        stats_saved_words: "Gespeicherte Wörter",
+        stats_numbers_correct: "Zahlen richtig",
+        stats_numbers_of: "von",
+        stats_reset: "Statistik zurücksetzen",
+        stats_reset_confirm: "Statistik wirklich zurücksetzen? Gespeicherte Wörter und Geschichten bleiben erhalten."
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -505,7 +529,20 @@
         translating: "Translating …",
         open_translator: "Open in Google Translate",
         voice_hint: "Tip: The default Windows voice sounds artificial. Better voices: 1) Open this app in Microsoft Edge – it offers natural online voices (e.g. “Xiaoxiao Online (Natural)”). 2) Or install more voices in Windows: Settings → Time & Language → Language & Region → Add a language → “Chinese (Simplified)” with text-to-speech. Note: non-Chinese voices cannot speak Chinese – the browser silently falls back to the default voice.",
-        voices_found: "Chinese voice(s) found."
+        voices_found: "Chinese voice(s) found.",
+        nav_stats: "Statistics",
+        stats_title: "Learning Statistics",
+        stats_desc: "Your learning progress – stored locally in your browser only.",
+        stats_streak: "day streak",
+        stats_active_days: "Active days total",
+        stats_stories_read: "Stories read",
+        stats_sentences_heard: "Sentences listened to",
+        stats_word_lookups: "Words looked up",
+        stats_saved_words: "Saved words",
+        stats_numbers_correct: "Numbers correct",
+        stats_numbers_of: "of",
+        stats_reset: "Reset statistics",
+        stats_reset_confirm: "Really reset statistics? Saved words and stories are kept."
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -561,7 +598,20 @@
         translating: "Traduciendo …",
         open_translator: "Abrir en Google Translate",
         voice_hint: "Consejo: La voz estándar de Windows suena artificial. Mejores voces: 1) Abre esta app en Microsoft Edge – ofrece voces naturales en línea (p. ej. “Xiaoxiao Online (Natural)”). 2) O instala más voces en Windows: Configuración → Hora e idioma → Idioma y región → Agregar un idioma → “Chino (simplificado)” con texto a voz. Nota: las voces no chinas no pueden hablar chino – el navegador usa entonces la voz predeterminada.",
-        voices_found: "voz/voces china(s) encontrada(s)."
+        voices_found: "voz/voces china(s) encontrada(s).",
+        nav_stats: "Estadísticas",
+        stats_title: "Estadísticas de aprendizaje",
+        stats_desc: "Tu progreso – se guarda solo localmente en tu navegador.",
+        stats_streak: "días seguidos activo",
+        stats_active_days: "Días activos en total",
+        stats_stories_read: "Historias leídas",
+        stats_sentences_heard: "Oraciones escuchadas",
+        stats_word_lookups: "Palabras consultadas",
+        stats_saved_words: "Palabras guardadas",
+        stats_numbers_correct: "Números correctos",
+        stats_numbers_of: "de",
+        stats_reset: "Restablecer estadísticas",
+        stats_reset_confirm: "¿Restablecer las estadísticas? Las palabras e historias guardadas se conservan."
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -735,6 +785,100 @@
         if (gen[i] && gen[i].id === story.id) { gen[i] = story; saveGeneratedStories(gen); return; }
       }
     }
+
+    // Wörterbucheinträge wie "variant of 啊" oder "surname Bai" sind keine
+    // brauchbare Übersetzung – erkennen und wenn möglich auflösen.
+    function isUnhelpfulMeaning(meaning) {
+      if (!meaning) return true;
+      var m = String(meaning).trim().toLowerCase();
+      return /^(old |archaic )?variant of\b/.test(m) || /^surname\b/.test(m) || /^see [一-鿿]/.test(m) || /^see also\b/.test(m);
+    }
+    function resolveMeaning(entry) {
+      var meaning = getEntryMeaning(entry) || "";
+      var mm = meaning.match(/variant of ([一-鿿]+)/i);
+      if (mm && mm[1] && entry && mm[1] !== entry.word) {
+        var ref = DICT[mm[1]] || getGeneratedVocabulary()[mm[1]];
+        if (ref) {
+          var refMeaning = getEntryMeaning(ref);
+          if (refMeaning && !isNotFoundMeaning(refMeaning) && !isUnhelpfulMeaning(refMeaning)) return refMeaning;
+        }
+      }
+      return meaning;
+    }
+
+    // ── Lernstatistik ───────────────────────────────────────────────────
+    var STATS_KEY = "kanmandarin_stats";
+    function getStats() {
+      var s = null;
+      try { s = JSON.parse(localStorage.getItem(STATS_KEY) || "null"); } catch (e) {}
+      if (!s || typeof s !== "object") s = {};
+      if (!s.days || typeof s.days !== "object") s.days = {};
+      if (!s.readStories || typeof s.readStories !== "object") s.readStories = {};
+      var nums = ["sentencesHeard", "wordLookups", "numbersCorrect", "numbersTotal"];
+      for (var i = 0; i < nums.length; i++) {
+        if (typeof s[nums[i]] !== "number") s[nums[i]] = 0;
+      }
+      return s;
+    }
+    function saveStats(s) {
+      try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) {}
+    }
+    function statDateKey(d) {
+      var m = d.getMonth() + 1, day = d.getDate();
+      return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+    }
+    function bumpStat(field, inc) {
+      var s = getStats();
+      s[field] = (s[field] || 0) + (inc || 1);
+      s.days[statDateKey(new Date())] = 1;
+      saveStats(s);
+    }
+    function statStoryRead(id) {
+      if (!id) return;
+      var s = getStats();
+      s.readStories[id] = 1;
+      s.days[statDateKey(new Date())] = 1;
+      saveStats(s);
+    }
+    function computeStreak(days) {
+      var d = new Date();
+      var streak = 0;
+      if (!days[statDateKey(d)]) d.setDate(d.getDate() - 1); // heute noch nichts? Ab gestern zählen
+      while (days[statDateKey(d)]) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      }
+      return streak;
+    }
+    function renderStats() {
+      var el = document.getElementById("stats-content");
+      if (!el) return;
+      var s = getStats();
+      var activeDays = Object.keys(s.days).length;
+      var streak = computeStreak(s.days);
+      var storiesRead = Object.keys(s.readStories).length;
+      var savedCount = getSavedWords().length;
+      var pct = s.numbersTotal > 0 ? Math.round((s.numbersCorrect / s.numbersTotal) * 100) : null;
+      function card(value, label) {
+        return '<div class="stat-card"><div class="stat-value">' + value + '</div><div class="stat-label">' + label + '</div></div>';
+      }
+      el.innerHTML = '<div class="stats-grid">' +
+        card("🔥 " + streak, t("stats_streak")) +
+        card(activeDays, t("stats_active_days")) +
+        card(storiesRead, t("stats_stories_read")) +
+        card(s.sentencesHeard, t("stats_sentences_heard")) +
+        card(s.wordLookups, t("stats_word_lookups")) +
+        card(savedCount, t("stats_saved_words")) +
+        card(s.numbersCorrect + " / " + s.numbersTotal + (pct != null ? " (" + pct + "%)" : ""), t("stats_numbers_correct")) +
+        '</div>';
+      var resetBtn = document.getElementById("stats-reset-btn");
+      if (resetBtn) resetBtn.onclick = function() {
+        if (!confirm(t("stats_reset_confirm"))) return;
+        try { localStorage.removeItem(STATS_KEY); } catch (e) {}
+        renderStats();
+      };
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     var SAVED_WORDS_KEY = "kanmandarin_saved_words";
     function getSavedWords() {
@@ -1281,6 +1425,7 @@
       if (audioEl) { try { audioEl.pause(); } catch (e) {} audioEl = null; }
       currentStory = STORIES.find(function(s) { return s.id === id; });
       if (!currentStory || !currentStory.sentences || currentStory.sentences.length === 0) return;
+      statStoryRead(id);
       selectedSentenceIndex = null;
       currentTime = 0;
       currentSegmentIndex = null;
@@ -1316,11 +1461,11 @@
         var wordEsc = (entry.word || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
         var pinyinShow = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : (pressedWordState.contextPinyin || "?");
         var pinyinEsc = pinyinShow.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-        var meaning = getEntryMeaning(entry) || "";
+        var meaning = resolveMeaning(entry) || "";
         var meaningEsc = meaning.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
         box.className = "selected-sentence-box";
         box.innerHTML = '<div class="translation-top"><strong>' + wordEsc + '</strong> <span style="font-weight:400;color:#555">' + pinyinEsc + '</span></div><div class="pinyin-top">' + meaningEsc + '</div>';
-        if (isNotFoundMeaning(meaning) && entry.word) {
+        if ((isNotFoundMeaning(meaning) || isUnhelpfulMeaning(meaning)) && entry.word) {
           var pressedWord = entry.word;
           box.querySelector(".pinyin-top").textContent = t("translating");
           fallbackTranslate(pressedWord, function(tr) {
@@ -1490,7 +1635,9 @@
           var release = function() { clearPressedWord(); };
           var handlePressStart = function(e) {
             e.stopPropagation();
-            e.preventDefault();
+            // Nur bei Maus preventDefault (gegen Textauswahl). Bei Touch nicht,
+            // sonst ist Scrollen über dem Text unmöglich.
+            if (e.type === "mousedown") e.preventDefault();
             var sentenceEl = span.closest && span.closest(".sentence");
             if (!sentenceEl || !currentStory || !currentStory.sentences) return;
             var segIdx = sentenceEl.getAttribute("data-segment-index");
@@ -1522,11 +1669,13 @@
           };
 
           span.addEventListener("mousedown", handlePressStart);
-          span.addEventListener("touchstart", handlePressStart, { passive: false });
+          span.addEventListener("touchstart", handlePressStart, { passive: true });
           span.addEventListener("mouseup", release);
           span.addEventListener("mouseleave", release);
           span.addEventListener("touchend", release);
           span.addEventListener("touchcancel", release);
+          // Beim Scrollen (Finger bewegt sich) Wortanzeige schließen
+          span.addEventListener("touchmove", release, { passive: true });
           span.addEventListener("contextmenu", function(e) { e.preventDefault(); });
         })(charSpans[k]);
       }
@@ -1559,6 +1708,7 @@
     }
 
     function setPressedWord(entry, contextPinyin, segmentIndex, startCharIndex, endCharIndex) {
+      bumpStat("wordLookups");
       pressedWordState = {
         entry: entry,
         contextPinyin: contextPinyin || "",
@@ -1727,6 +1877,7 @@
         if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
         setCurrentReadingChar(-1, -1);
         if (session !== ttsSession) return; // gestoppt – nicht weiterlesen
+        bumpStat("sentencesHeard");
         currentTime = seg.end;
         updateTimeDisplay();
         updateHighlight();
@@ -1826,6 +1977,7 @@
       if (screenId === "settings") renderSettings();
       if (screenId === "paste") initPasteScreen();
       if (screenId === "numbers") initNumberTrainer();
+      if (screenId === "stats") renderStats();
     }
 
     // ── Paste / Free Text Reader ────────────────────────────────────────
@@ -1905,9 +2057,10 @@
         }
 
         var entry = lookup(found.word);
+        bumpStat("wordLookups");
         var pinyin = (entry.pinyin && entry.pinyin !== "?") ? entry.pinyin : "";
-        var meaning = getEntryMeaning(entry) || "";
-        var meaningKnown = meaning && !isNotFoundMeaning(meaning);
+        var meaning = resolveMeaning(entry) || "";
+        var meaningKnown = meaning && !isNotFoundMeaning(meaning) && !isUnhelpfulMeaning(meaning);
         wordBox.className = "selected-sentence-box";
         wordBox.innerHTML =
           '<div class="translation-top"><strong>' + escapeHtml(entry.word || "") + '</strong>' +
@@ -2204,8 +2357,10 @@
       inp.disabled = true;
       document.getElementById("nt-chinese").textContent = numberToChinese(ntState.current);
       document.getElementById("nt-pinyin").textContent = numberToPinyin(ntState.current);
+      bumpStat("numbersTotal");
       if (val === ntState.current) {
         ntState.correct++;
+        bumpStat("numbersCorrect");
         inp.className = "nt-input correct";
         fb.textContent = t("numbers_correct");
         fb.className = "nt-feedback correct";
