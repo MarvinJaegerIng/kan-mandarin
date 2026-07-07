@@ -1124,7 +1124,7 @@
       html += '<div class="srs-card">';
       html += '<div class="srs-hanzi">' + escapeHtml(w.character) + '</div>';
       if (srsRevealed) {
-        html += '<div class="srs-pinyin">' + escapeHtml(w.pinyin || "") + '</div>';
+        html += '<div class="srs-pinyin">' + escapeHtml(w.pinyin || "") + ' <button id="srs-speak-btn" style="border:none;background:#f0f0f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.9rem">🔊</button></div>';
         html += '<div class="srs-meaning">' + escapeHtml(w.english || "") + '</div>';
         if (w.example_sentence) {
           html += '<div class="srs-example">' + escapeHtml(w.example_sentence) + (w.example_translation ? '<br>' + escapeHtml(w.example_translation) : '') + '</div>';
@@ -1137,16 +1137,31 @@
           '</div>';
       } else {
         html += '<div class="srs-btn-row"><button class="btn btn-primary" id="srs-show-btn">' + t("srs_show") + '</button></div>';
+        // Audio schon auf der Vorderseite vorladen, damit es beim Umdrehen
+        // ohne Verzögerung ertönt (wichtig auch für Mobile-Autoplay-Regeln)
+        if (aiTTSAvailable()) getTTSAudioBlob(w.character).catch(function() {});
       }
       html += '</div>';
       el.innerHTML = html;
       var speakIt = function() {
-        if (!window.speechSynthesis) return;
-        var u = new SpeechSynthesisUtterance(w.character);
-        u.lang = "zh-CN";
-        var v = getSelectedVoice(); if (v) u.voice = v;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(u);
+        var browserSpeak = function() {
+          if (!window.speechSynthesis) return;
+          var u = new SpeechSynthesisUtterance(w.character);
+          u.lang = "zh-CN";
+          var v = getSelectedVoice(); if (v) u.voice = v;
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(u);
+        };
+        if (aiTTSAvailable()) {
+          getTTSAudioBlob(w.character).then(function(blob) {
+            var url = URL.createObjectURL(blob);
+            var a = new Audio(url);
+            a.onended = function() { URL.revokeObjectURL(url); };
+            a.play().catch(browserSpeak);
+          }).catch(browserSpeak);
+        } else {
+          browserSpeak();
+        }
       };
       var showBtn = document.getElementById("srs-show-btn");
       if (showBtn) showBtn.onclick = function() {
@@ -1154,6 +1169,8 @@
         renderSrsCard();
         speakIt();
       };
+      var srsSpeakBtn = document.getElementById("srs-speak-btn");
+      if (srsSpeakBtn) srsSpeakBtn.onclick = speakIt;
       el.querySelectorAll(".srs-rate-btn").forEach(function(btn) {
         btn.onclick = function() {
           var q = parseInt(btn.getAttribute("data-q"), 10);
