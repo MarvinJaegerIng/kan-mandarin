@@ -51,7 +51,7 @@
     .stat-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; text-align: center; }
     .stat-value { font-size: 1.8rem; font-weight: 700; color: #2563eb; }
     .stat-label { font-size: 0.8rem; color: #666; margin-top: 4px; }
-    .srs-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 32px 20px; text-align: center; max-width: 440px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .srs-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 32px 20px; text-align: center; max-width: 440px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 360px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     .srs-hanzi { font-size: 3.2rem; line-height: 1.2; margin-bottom: 8px; }
     .srs-pinyin { font-size: 1.1rem; color: #555; margin-bottom: 6px; }
     .srs-meaning { font-size: 1rem; color: #1a1a1a; margin-bottom: 10px; }
@@ -1127,7 +1127,9 @@
         html += '<div class="srs-pinyin">' + escapeHtml(w.pinyin || "") + ' <button id="srs-speak-btn" style="border:none;background:#f0f0f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.9rem">🔊</button></div>';
         html += '<div class="srs-meaning">' + escapeHtml(w.english || "") + '</div>';
         if (w.example_sentence) {
-          html += '<div class="srs-example">' + escapeHtml(w.example_sentence) + (w.example_translation ? '<br>' + escapeHtml(w.example_translation) : '') + '</div>';
+          html += '<div class="srs-example">' + escapeHtml(w.example_sentence) +
+            ' <button id="srs-speak-sentence-btn" style="border:none;background:#f0f0f0;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:0.85rem">🔊</button>' +
+            (w.example_translation ? '<br>' + escapeHtml(w.example_translation) : '') + '</div>';
         }
         html += '<div class="srs-btn-row">' +
           '<button class="srs-rate-btn" data-q="2" style="background:#fdecea;color:#c62828">' + t("srs_again") + '<small>' + srsIntervalLabel(card, 2) + '</small></button>' +
@@ -1137,40 +1139,60 @@
           '</div>';
       } else {
         html += '<div class="srs-btn-row"><button class="btn btn-primary" id="srs-show-btn">' + t("srs_show") + '</button></div>';
-        // Audio schon auf der Vorderseite vorladen, damit es beim Umdrehen
-        // ohne Verzögerung ertönt (wichtig auch für Mobile-Autoplay-Regeln)
-        if (aiTTSAvailable()) getTTSAudioBlob(w.character).catch(function() {});
+        // Audio schon auf der Vorderseite vorladen (Wort UND Beispielsatz),
+        // damit es beim Umdrehen ohne Verzögerung ertönt (wichtig auch für
+        // Mobile-Autoplay-Regeln)
+        if (aiTTSAvailable()) {
+          getTTSAudioBlob(w.character).catch(function() {});
+          if (w.example_sentence) getTTSAudioBlob(w.example_sentence).catch(function() {});
+        }
       }
       html += '</div>';
       el.innerHTML = html;
-      var speakIt = function() {
+      // Einen Text sprechen (KI-Stimme mit Cache, sonst Browser); ruft
+      // onDone auf, wenn fertig – damit Wort und Satz nacheinander laufen
+      var srsSpeakText = function(text, onDone) {
         var browserSpeak = function() {
-          if (!window.speechSynthesis) return;
-          var u = new SpeechSynthesisUtterance(w.character);
+          if (!window.speechSynthesis) { if (onDone) onDone(); return; }
+          var u = new SpeechSynthesisUtterance(text);
           u.lang = "zh-CN";
           var v = getSelectedVoice(); if (v) u.voice = v;
+          var fin = false;
+          u.onend = u.onerror = function() { if (fin) return; fin = true; if (onDone) onDone(); };
           window.speechSynthesis.cancel();
           window.speechSynthesis.speak(u);
         };
         if (aiTTSAvailable()) {
-          getTTSAudioBlob(w.character).then(function(blob) {
+          getTTSAudioBlob(text).then(function(blob) {
             var url = URL.createObjectURL(blob);
             var a = new Audio(url);
-            a.onended = function() { URL.revokeObjectURL(url); };
-            a.play().catch(browserSpeak);
+            var fin = false;
+            a.onended = a.onerror = function() { if (fin) return; fin = true; URL.revokeObjectURL(url); if (onDone) onDone(); };
+            a.play().catch(function() { if (!fin) { fin = true; URL.revokeObjectURL(url); browserSpeak(); } });
           }).catch(browserSpeak);
         } else {
           browserSpeak();
         }
       };
+      var speakWordThenSentence = function() {
+        srsSpeakText(w.character, function() {
+          if (w.example_sentence) {
+            setTimeout(function() {
+              if (srsRevealed && srsQueue[0] === w) srsSpeakText(w.example_sentence);
+            }, 350);
+          }
+        });
+      };
       var showBtn = document.getElementById("srs-show-btn");
       if (showBtn) showBtn.onclick = function() {
         srsRevealed = true;
         renderSrsCard();
-        speakIt();
+        speakWordThenSentence();
       };
       var srsSpeakBtn = document.getElementById("srs-speak-btn");
-      if (srsSpeakBtn) srsSpeakBtn.onclick = speakIt;
+      if (srsSpeakBtn) srsSpeakBtn.onclick = function() { srsSpeakText(w.character); };
+      var srsSentenceBtn = document.getElementById("srs-speak-sentence-btn");
+      if (srsSentenceBtn) srsSentenceBtn.onclick = function() { srsSpeakText(w.example_sentence); };
       el.querySelectorAll(".srs-rate-btn").forEach(function(btn) {
         btn.onclick = function() {
           var q = parseInt(btn.getAttribute("data-q"), 10);
