@@ -2107,28 +2107,50 @@
         speakNextSentence();
         return;
       }
-      if (aiTTSAvailable()) {
-        aiSpeakSentence(session, seg, sentIdx, textToSpeak);
-      } else {
-        browserSpeakSentence(session, seg, sentIdx, textToSpeak);
-      }
+      browserSpeakSentence(session, seg, sentIdx, textToSpeak);
     }
 
-    // KI-Stimme: Audio abspielen, Markierung über die ECHTE Audiodauer verteilen
-    function aiSpeakSentence(session, seg, sentIdx, textToSpeak) {
-      var tokenRanges = computeTokenRanges(textToSpeak, seg.pinyin);
-      getTTSAudioBlob(textToSpeak).then(function(blob) {
+    // KI-Stimme: EINE Anfrage für die GANZE Geschichte. Das Gratis-Kontingent
+    // erlaubt nur ~3 Anfragen/Minute – pro Satz einzeln anzufragen scheiterte
+    // deshalb nach 2-3 Sätzen und die Stimme wechselte mitten in der
+    // Geschichte zur Browser-Stimme. Eine Anfrage pro Geschichte bleibt
+    // praktisch immer unter dem Limit, und die Stimme kann nicht wechseln.
+    function aiPlayStory(session) {
+      if (!currentStory || !currentStory.sentences || !currentStory.sentences.length) return;
+      var sentences = currentStory.sentences;
+      var texts = [];
+      for (var i = 0; i < sentences.length; i++) texts.push((sentences[i].text || "").trim());
+      var fullText = texts.join("\n");
+      var cacheKey = getAITTSVoice() + "|story|" + fullText;
+      var virtualTotal = sentences[sentences.length - 1].end || 1;
+      // Zeichen-Layout: globale Position -> Satz + Zeichen im Satz
+      var layout = [];
+      var cum = 0;
+      for (var li = 0; li < texts.length; li++) {
+        layout.push({ start: cum, end: cum + texts[li].length, text: texts[li], ranges: computeTokenRanges(texts[li], sentences[li].pinyin) });
+        cum += texts[li].length + 1; // +1 für den Zeilenumbruch
+      }
+      var totalChars = Math.max(1, cum - 1);
+      ttsCacheGet(cacheKey).then(function(blob) {
+        if (blob) return blob;
+        return generateGeminiTTSBlob(fullText).then(function(b) {
+          ttsCachePut(cacheKey, b);
+          return b;
+        });
+      }).then(function(blob) {
         if (session !== ttsSession) return;
         var url = URL.createObjectURL(blob);
         var a = new Audio(url);
         aiAudioEl = a;
         a.playbackRate = playbackSpeed;
+        a.onloadedmetadata = function() {
+          // Bei Wiedereinstieg mitten in der Geschichte an die Stelle springen
+          if (currentTime > 0 && isFinite(a.duration) && a.duration > 0) {
+            a.currentTime = Math.min(a.duration * 0.999, (currentTime / virtualTotal) * a.duration);
+          }
+        };
         a.onplay = function() {
           if (session !== ttsSession) return;
-          currentSegmentIndex = sentIdx;
-          currentTime = seg.start;
-          updateTimeDisplay();
-          updateHighlight();
           if (readingCharInterval) clearInterval(readingCharInterval);
           readingCharInterval = setInterval(function() {
             if (session !== ttsSession) {
@@ -2137,9 +2159,17 @@
             }
             var d = a.duration;
             if (!d || !isFinite(d) || d <= 0) return;
-            var frac = Math.min(a.currentTime / d, 0.999);
-            var ci = Math.floor(frac * textToSpeak.length);
-            highlightTokenAtChar(sentIdx, tokenRanges, ci);
+            var frac = Math.min(a.currentTime / d, 0.9999);
+            var g = frac * totalChars;
+            var si = 0;
+            while (si < layout.length - 1 && g >= layout[si + 1].start) si++;
+            var ci = Math.max(0, Math.min(Math.floor(g - layout[si].start), Math.max(0, layout[si].text.length - 1)));
+            currentSegmentIndex = si;
+            currentTime = frac * virtualTotal;
+            updateTimeDisplay();
+            var sentEls = document.querySelectorAll("#reader-sentences .sentence");
+            for (var j = 0; j < sentEls.length; j++) sentEls[j].classList.toggle("highlight", j === si);
+            highlightTokenAtChar(si, layout[si].ranges, ci);
           }, 50);
         };
         var finished = false; // onended UND onerror können beide feuern – nur einmal reagieren
@@ -2150,7 +2180,15 @@
           aiAudioEl = null;
           if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
           setCurrentReadingChar(-1, -1);
-          ttsAdvance(session, seg, true);
+          if (session !== ttsSession) return;
+          bumpStat("sentencesHeard", sentences.length);
+          ttsPlaying = false;
+          currentTime = 0;
+          ttsSentenceIndex = 0;
+          updateTimeDisplay();
+          updateHighlight();
+          var btn = document.querySelector("#play-btn");
+          if (btn) btn.textContent = "▶";
         };
         a.onerror = function() {
           if (finished) return;
@@ -2160,24 +2198,20 @@
           if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
           setCurrentReadingChar(-1, -1);
           if (session !== ttsSession) return;
-          browserSpeakSentence(session, seg, sentIdx, textToSpeak);
+          speakNextSentence(); // komplette Geschichte mit Browser-Stimme (konsistent)
         };
         a.play().catch(function() {
           if (finished) return;
           finished = true;
           aiAudioEl = null;
           if (session !== ttsSession) return;
-          browserSpeakSentence(session, seg, sentIdx, textToSpeak);
+          speakNextSentence();
         });
-        // Nächsten Satz schon im Hintergrund generieren (weniger Wartezeit)
-        var next = currentStory && currentStory.sentences && currentStory.sentences[sentIdx + 1];
-        if (next && next.text && next.text.trim()) {
-          getTTSAudioBlob(next.text.trim()).catch(function() {});
-        }
       }).catch(function() {
-        // Kontingent erschöpft / Netzwerkfehler → Browser-Stimme für diesen Satz
+        // Generierung fehlgeschlagen (Limit/Netz) → KOMPLETTE Geschichte mit
+        // Browser-Stimme statt mitten drin die Stimme zu wechseln
         if (session !== ttsSession) return;
-        browserSpeakSentence(session, seg, sentIdx, textToSpeak);
+        speakNextSentence();
       });
     }
 
@@ -2313,7 +2347,8 @@
       if (playBtn) playBtn.textContent = "⏸";
       ttsSession++;
       ttsPlaying = true;
-      speakNextSentence();
+      if (aiTTSAvailable()) aiPlayStory(ttsSession);
+      else speakNextSentence();
     }
 
     function showScreen(screenId) {
