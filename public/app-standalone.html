@@ -51,6 +51,15 @@
     .stat-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; text-align: center; }
     .stat-value { font-size: 1.8rem; font-weight: 700; color: #2563eb; }
     .stat-label { font-size: 0.8rem; color: #666; margin-top: 4px; }
+    .srs-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 32px 20px; text-align: center; max-width: 440px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .srs-hanzi { font-size: 3.2rem; line-height: 1.2; margin-bottom: 8px; }
+    .srs-pinyin { font-size: 1.1rem; color: #555; margin-bottom: 6px; }
+    .srs-meaning { font-size: 1rem; color: #1a1a1a; margin-bottom: 10px; }
+    .srs-example { font-size: 0.9rem; color: #777; margin-top: 8px; }
+    .srs-btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+    .srs-rate-btn { border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .srs-rate-btn small { display: block; font-weight: 400; font-size: 0.7rem; margin-top: 2px; opacity: 0.8; }
+    .srs-progress { font-size: 0.85rem; color: #666; margin-bottom: 12px; }
     .sentence .chars span.char:hover { background: rgba(37, 99, 235, 0.15); }
     .sentence .chars span.char.char-reading { color: #2563eb; font-weight: 600; }
     .sentence .chars span.char.char-pressed { background: rgba(37, 99, 235, 0.22); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25); }
@@ -140,6 +149,7 @@
       <a href="#" class="nav-link active" data-screen="library">📚 <span data-i18n="nav_library">Bibliothek</span></a>
       <a href="#" class="nav-link" data-screen="favorites">❤️ <span data-i18n="nav_favorites">Favoriten</span></a>
       <a href="#" class="nav-link" data-screen="saved">💾 <span data-i18n="nav_saved">Gespeicherte Wörter</span></a>
+      <a href="#" class="nav-link" data-screen="srs">🃏 <span data-i18n="nav_srs">Vokabeltrainer</span></a>
       <a href="#" class="nav-link" data-screen="new-story">✨ <span data-i18n="nav_new_story">Neue Geschichte</span></a>
       <a href="#" class="nav-link" data-screen="paste">📖 <span data-i18n="nav_paste">Text lesen</span></a>
       <a href="#" class="nav-link" data-screen="numbers">🔢 <span data-i18n="nav_numbers">Zahlentrainer</span></a>
@@ -308,6 +318,11 @@
             </div>
             <div class="nt-score" id="nt-score"></div>
           </div>
+        </div>
+        <div id="screen-srs" class="screen">
+          <h1 class="page-title" data-i18n="srs_title">Vokabeltrainer</h1>
+          <p class="muted" data-i18n="srs_desc">Wiederhole deine gespeicherten Wörter mit Spaced Repetition (wie Anki).</p>
+          <div id="srs-content"></div>
         </div>
         <div id="screen-stats" class="screen">
           <h1 class="page-title" data-i18n="stats_title">Lernstatistik</h1>
@@ -489,7 +504,23 @@
         settings_ai_tts: "✨ KI-Stimme (Gemini) verwenden – natürlicher Klang",
         settings_ai_voice: "KI-Stimme:",
         settings_ai_tts_hint: "Benötigt den Gemini API-Schlüssel (oben). Das Audio wird pro Satz einmal erzeugt und dauerhaft im Browser zwischengespeichert. Im Gratis-Kontingent ist die Anzahl pro Tag begrenzt – ist es aufgebraucht, springt automatisch die Browser-Stimme ein.",
-        ai_voice_error: "KI-Stimme nicht verfügbar. Bitte Gemini API-Schlüssel prüfen (Kontingent evtl. aufgebraucht)."
+        ai_voice_error: "KI-Stimme nicht verfügbar. Bitte Gemini API-Schlüssel prüfen (Kontingent evtl. aufgebraucht).",
+        nav_srs: "Vokabeltrainer",
+        srs_title: "Vokabeltrainer",
+        srs_desc: "Wiederhole deine gespeicherten Wörter mit Spaced Repetition (wie Anki).",
+        srs_none: "Noch keine Wörter gespeichert. Halte im Reader ein Wort gedrückt und tippe auf „Speichern“ – dann erscheint es hier.",
+        srs_done: "🎉 Fertig für heute! Alle fälligen Karten wiederholt.",
+        srs_next_due: "Nächste Wiederholung:",
+        srs_show: "Antwort zeigen",
+        srs_again: "Nochmal",
+        srs_hard: "Schwer",
+        srs_good: "Gut",
+        srs_easy: "Leicht",
+        srs_remaining: "Karten übrig",
+        srs_min: "Min.",
+        srs_day: "Tag",
+        srs_days: "Tage",
+        srs_now: "jetzt"
       },
       en: {
         nav_library: "Library", nav_favorites: "Favorites", nav_saved: "Saved Words", nav_new_story: "New Story", nav_settings: "Settings",
@@ -562,7 +593,23 @@
         settings_ai_tts: "✨ Use AI voice (Gemini) – natural sound",
         settings_ai_voice: "AI voice:",
         settings_ai_tts_hint: "Requires the Gemini API key (above). Audio is generated once per sentence and cached permanently in your browser. The free tier has a daily limit – once exhausted, the browser voice takes over automatically.",
-        ai_voice_error: "AI voice unavailable. Please check your Gemini API key (quota may be exhausted)."
+        ai_voice_error: "AI voice unavailable. Please check your Gemini API key (quota may be exhausted).",
+        nav_srs: "Flashcards",
+        srs_title: "Flashcards",
+        srs_desc: "Review your saved words with spaced repetition (like Anki).",
+        srs_none: "No words saved yet. Press and hold a word in the reader and tap “Save” – it will appear here.",
+        srs_done: "🎉 Done for today! All due cards reviewed.",
+        srs_next_due: "Next review:",
+        srs_show: "Show answer",
+        srs_again: "Again",
+        srs_hard: "Hard",
+        srs_good: "Good",
+        srs_easy: "Easy",
+        srs_remaining: "cards left",
+        srs_min: "min",
+        srs_day: "day",
+        srs_days: "days",
+        srs_now: "now"
       },
       es: {
         nav_library: "Biblioteca", nav_favorites: "Favoritos", nav_saved: "Palabras guardadas", nav_new_story: "Nueva historia", nav_settings: "Ajustes",
@@ -635,7 +682,23 @@
         settings_ai_tts: "✨ Usar voz de IA (Gemini) – sonido natural",
         settings_ai_voice: "Voz de IA:",
         settings_ai_tts_hint: "Requiere la clave API de Gemini (arriba). El audio se genera una vez por oración y se guarda permanentemente en el navegador. El nivel gratuito tiene un límite diario – al agotarse, la voz del navegador toma el relevo automáticamente.",
-        ai_voice_error: "Voz de IA no disponible. Revisa tu clave API de Gemini (la cuota puede estar agotada)."
+        ai_voice_error: "Voz de IA no disponible. Revisa tu clave API de Gemini (la cuota puede estar agotada).",
+        nav_srs: "Tarjetas",
+        srs_title: "Tarjetas de vocabulario",
+        srs_desc: "Repasa tus palabras guardadas con repetición espaciada (como Anki).",
+        srs_none: "Aún no hay palabras guardadas. Mantén pulsada una palabra en el lector y toca “Guardar“ – aparecerá aquí.",
+        srs_done: "🎉 ¡Listo por hoy! Todas las tarjetas repasadas.",
+        srs_next_due: "Próximo repaso:",
+        srs_show: "Mostrar respuesta",
+        srs_again: "Otra vez",
+        srs_hard: "Difícil",
+        srs_good: "Bien",
+        srs_easy: "Fácil",
+        srs_remaining: "tarjetas restantes",
+        srs_min: "min",
+        srs_day: "día",
+        srs_days: "días",
+        srs_now: "ahora"
       }
     };
     function isFileProtocol() { try { return typeof location !== "undefined" && location.protocol === "file:"; } catch (e) { return false; } }
@@ -832,6 +895,21 @@
       if (hasAIKey()) aiTranslate(text, sourceLang, cb);
       else translateOnline(text, sourceLang, cb);
     }
+    // Pinyin-Fallback per KI für Wörter, die nicht im Wörterbuch stehen
+    function fetchPinyin(word, cb) {
+      if (!word || !hasAIKey()) { cb(""); return; }
+      var cacheKey = "py|" + word;
+      if (fallbackTransCache[cacheKey]) { cb(fallbackTransCache[cacheKey]); return; }
+      callAIRaw("You are a Chinese pronunciation assistant. Reply with ONLY the Hanyu Pinyin (with tone marks, one space between syllables) for the given Chinese text. No quotes, no explanations.", word)
+        .then(function(raw) {
+          var py = (raw || "").trim().split("\n")[0].replace(/^["“”']+|["“”']+$/g, "");
+          if (!py || py.length > 80) throw new Error("bad");
+          fallbackTransCache[cacheKey] = py;
+          try { localStorage.setItem(FALLBACK_TRANS_CACHE_KEY, JSON.stringify(fallbackTransCache)); } catch (e) {}
+          cb(py);
+        })
+        .catch(function() { cb(""); });
+    }
     // Prüft, ob die Bedeutung aus dem (englischen) HSK-Wörterbuch stammt und
     // für die aktuelle Zielsprache noch übersetzt werden sollte
     function needsMeaningLocalization(entry) {
@@ -947,6 +1025,149 @@
         try { localStorage.removeItem(STATS_KEY); } catch (e) {}
         renderStats();
       };
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    // ── Vokabeltrainer (Spaced Repetition, SM-2 wie Anki) ───────────────
+    var SRS_KEY = "kanmandarin_srs";
+    function getSrsData() {
+      try {
+        var raw = localStorage.getItem(SRS_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    }
+    function saveSrsData(d) {
+      try { localStorage.setItem(SRS_KEY, JSON.stringify(d)); } catch (e) {}
+    }
+    function srsCardFor(character, data) {
+      return data[character] || { ease: 2.5, interval: 0, reps: 0, due: 0 };
+    }
+    // SM-2: q = 2 (Nochmal), 3 (Schwer), 4 (Gut), 5 (Leicht).
+    // Liefert das neue Karten-Objekt (ohne zu speichern).
+    function srsSchedule(card, q) {
+      var c = { ease: card.ease, interval: card.interval, reps: card.reps, due: card.due };
+      if (q < 3) {
+        c.reps = 0;
+        c.interval = 0;
+        c.due = Date.now() + 10 * 60 * 1000; // in 10 Minuten nochmal
+      } else {
+        if (c.reps === 0) c.interval = 1;
+        else if (c.reps === 1) c.interval = 6;
+        else c.interval = Math.round(c.interval * c.ease);
+        if (q === 3) c.interval = Math.max(1, Math.round(c.interval * 0.8));
+        if (q === 5) c.interval = Math.round(c.interval * 1.3);
+        c.reps++;
+        c.ease = Math.max(1.3, c.ease + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
+        c.due = Date.now() + c.interval * 24 * 60 * 60 * 1000;
+      }
+      return c;
+    }
+    function srsIntervalLabel(card, q) {
+      var c = srsSchedule(card, q);
+      if (q < 3) return "10 " + t("srs_min");
+      return c.interval + " " + (c.interval === 1 ? t("srs_day") : t("srs_days"));
+    }
+    function srsDueWords() {
+      var words = getSavedWords();
+      var data = getSrsData();
+      var now = Date.now();
+      var due = [];
+      for (var i = 0; i < words.length; i++) {
+        if (srsCardFor(words[i].character, data).due <= now) due.push(words[i]);
+      }
+      return due;
+    }
+    var srsQueue = [];
+    var srsRevealed = false;
+    function renderSrsScreen() {
+      srsQueue = srsDueWords();
+      // mischen
+      for (var i = srsQueue.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = srsQueue[i]; srsQueue[i] = srsQueue[j]; srsQueue[j] = tmp;
+      }
+      srsRevealed = false;
+      renderSrsCard();
+    }
+    function renderSrsCard() {
+      var el = document.getElementById("srs-content");
+      if (!el) return;
+      var allWords = getSavedWords();
+      if (allWords.length === 0) {
+        el.innerHTML = '<p class="muted">' + t("srs_none") + '</p>';
+        return;
+      }
+      if (srsQueue.length === 0) {
+        // Nächste Fälligkeit ermitteln
+        var data = getSrsData();
+        var nextDue = null;
+        for (var i = 0; i < allWords.length; i++) {
+          var c = srsCardFor(allWords[i].character, data);
+          if (nextDue === null || c.due < nextDue) nextDue = c.due;
+        }
+        var when = "";
+        if (nextDue != null) {
+          var diffMin = Math.round((nextDue - Date.now()) / 60000);
+          if (diffMin <= 0) when = t("srs_now");
+          else if (diffMin < 60) when = diffMin + " " + t("srs_min");
+          else if (diffMin < 60 * 24) when = Math.round(diffMin / 60) + " h";
+          else { var dd = Math.round(diffMin / (60 * 24)); when = dd + " " + (dd === 1 ? t("srs_day") : t("srs_days")); }
+        }
+        el.innerHTML = '<div class="srs-card"><div style="font-size:1.1rem">' + t("srs_done") + '</div>' +
+          (when ? '<p class="muted" style="margin-top:10px">' + t("srs_next_due") + ' ' + when + '</p>' : '') + '</div>';
+        return;
+      }
+      var w = srsQueue[0];
+      var data2 = getSrsData();
+      var card = srsCardFor(w.character, data2);
+      var html = '<div class="srs-progress">' + srsQueue.length + ' ' + t("srs_remaining") + '</div>';
+      html += '<div class="srs-card">';
+      html += '<div class="srs-hanzi">' + escapeHtml(w.character) + '</div>';
+      if (srsRevealed) {
+        html += '<div class="srs-pinyin">' + escapeHtml(w.pinyin || "") + '</div>';
+        html += '<div class="srs-meaning">' + escapeHtml(w.english || "") + '</div>';
+        if (w.example_sentence) {
+          html += '<div class="srs-example">' + escapeHtml(w.example_sentence) + (w.example_translation ? '<br>' + escapeHtml(w.example_translation) : '') + '</div>';
+        }
+        html += '<div class="srs-btn-row">' +
+          '<button class="srs-rate-btn" data-q="2" style="background:#fdecea;color:#c62828">' + t("srs_again") + '<small>' + srsIntervalLabel(card, 2) + '</small></button>' +
+          '<button class="srs-rate-btn" data-q="3" style="background:#fff3e0;color:#e65100">' + t("srs_hard") + '<small>' + srsIntervalLabel(card, 3) + '</small></button>' +
+          '<button class="srs-rate-btn" data-q="4" style="background:#e8f5e9;color:#2e7d32">' + t("srs_good") + '<small>' + srsIntervalLabel(card, 4) + '</small></button>' +
+          '<button class="srs-rate-btn" data-q="5" style="background:#e3f2fd;color:#1565c0">' + t("srs_easy") + '<small>' + srsIntervalLabel(card, 5) + '</small></button>' +
+          '</div>';
+      } else {
+        html += '<div class="srs-btn-row"><button class="btn btn-primary" id="srs-show-btn">' + t("srs_show") + '</button></div>';
+      }
+      html += '</div>';
+      el.innerHTML = html;
+      var speakIt = function() {
+        if (!window.speechSynthesis) return;
+        var u = new SpeechSynthesisUtterance(w.character);
+        u.lang = "zh-CN";
+        var v = getSelectedVoice(); if (v) u.voice = v;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      };
+      var showBtn = document.getElementById("srs-show-btn");
+      if (showBtn) showBtn.onclick = function() {
+        srsRevealed = true;
+        renderSrsCard();
+        speakIt();
+      };
+      el.querySelectorAll(".srs-rate-btn").forEach(function(btn) {
+        btn.onclick = function() {
+          var q = parseInt(btn.getAttribute("data-q"), 10);
+          var data3 = getSrsData();
+          data3[w.character] = srsSchedule(srsCardFor(w.character, data3), q);
+          saveSrsData(data3);
+          bumpStat("srsReviews");
+          srsQueue.shift();
+          // "Nochmal" (q<3): Karte kommt in dieser Sitzung ans Ende zurück
+          if (q < 3) srsQueue.push(w);
+          srsRevealed = false;
+          renderSrsCard();
+        };
+      });
     }
     // ─────────────────────────────────────────────────────────────────────
 
@@ -1568,7 +1789,7 @@
         var meaning = resolveMeaning(entry) || "";
         var meaningEsc = meaning.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
         box.className = "selected-sentence-box";
-        box.innerHTML = '<div class="translation-top"><strong>' + wordEsc + '</strong> <span style="font-weight:400;color:#555">' + pinyinEsc + '</span></div><div class="pinyin-top">' + meaningEsc + '</div>';
+        box.innerHTML = '<div class="translation-top"><strong>' + wordEsc + '</strong> <span class="pw-pinyin" style="font-weight:400;color:#555">' + pinyinEsc + '</span></div><div class="pinyin-top">' + meaningEsc + '</div>';
         if ((isNotFoundMeaning(meaning) || isUnhelpfulMeaning(meaning)) && entry.word) {
           var pressedWord = entry.word;
           box.querySelector(".pinyin-top").textContent = t("translating");
@@ -1586,6 +1807,58 @@
             if (el) el.textContent = tr;
           });
         }
+        // Pinyin-Fallback: "?" durch KI-Pinyin ersetzen
+        if (pinyinShow === "?" && entry.word) {
+          var pwForPy = entry.word;
+          fetchPinyin(pwForPy, function(py) {
+            if (!py || !pressedWordState || !pressedWordState.entry || pressedWordState.entry.word !== pwForPy) return;
+            var pyEl = box.querySelector(".pw-pinyin");
+            if (pyEl) pyEl.textContent = py;
+          });
+        }
+        // Aktionen: Speichern + Vorlesen (Box bleibt nach Loslassen stehen)
+        var pwBtnRow = document.createElement("div");
+        pwBtnRow.style.cssText = "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap";
+        var savedAlready = isWordSaved(entry.word);
+        var saveBtn = document.createElement("button");
+        saveBtn.textContent = savedAlready ? "✓ " + t("popup_saved") : "💾 " + t("popup_save");
+        saveBtn.disabled = savedAlready;
+        saveBtn.style.cssText = "padding:5px 12px;border:none;border-radius:6px;background:" + (savedAlready ? "#e8f5e9" : "#2563eb") + ";color:" + (savedAlready ? "#2e7d32" : "#fff") + ";cursor:pointer;font-size:0.85rem";
+        saveBtn.onclick = function(ev) {
+          ev.stopPropagation();
+          var segIdx = pressedWordState ? pressedWordState.segmentIndex : null;
+          var seg = (segIdx != null && currentStory && currentStory.sentences) ? currentStory.sentences[segIdx] : null;
+          var shownMeaning = box.querySelector(".pinyin-top") ? box.querySelector(".pinyin-top").textContent : "";
+          var shownPinyin = box.querySelector(".pw-pinyin") ? box.querySelector(".pw-pinyin").textContent : "";
+          saveWord(
+            { word: entry.word, pinyin: (shownPinyin && shownPinyin !== "?") ? shownPinyin : entry.pinyin, meaning: shownMeaning || entry.meaning },
+            seg ? seg.text : "",
+            seg ? getSentenceTranslation(seg) : "",
+            pressedWordState ? pressedWordState.contextPinyin : "",
+            seg ? (seg.pinyin || "") : ""
+          );
+          saveBtn.textContent = "✓ " + t("popup_saved_ok");
+          saveBtn.disabled = true;
+          saveBtn.style.background = "#e8f5e9";
+          saveBtn.style.color = "#2e7d32";
+        };
+        pwBtnRow.appendChild(saveBtn);
+        if (window.speechSynthesis || aiTTSAvailable()) {
+          var pwSpeakBtn = document.createElement("button");
+          pwSpeakBtn.textContent = "🔊";
+          pwSpeakBtn.style.cssText = "padding:5px 12px;border:none;border-radius:6px;background:#f0f0f0;cursor:pointer;font-size:0.85rem";
+          pwSpeakBtn.onclick = function(ev) {
+            ev.stopPropagation();
+            if (!window.speechSynthesis) return;
+            var u = new SpeechSynthesisUtterance(entry.word);
+            u.lang = "zh-CN";
+            var v = getSelectedVoice(); if (v) u.voice = v;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+          };
+          pwBtnRow.appendChild(pwSpeakBtn);
+        }
+        box.appendChild(pwBtnRow);
         return;
       }
 
@@ -1742,6 +2015,24 @@
             readerScreen.querySelectorAll(".sentence").forEach(function(el) { el.classList.remove("selected"); });
             div.classList.add("selected");
             updateSelectedSentenceBox();
+            // Audio-Position auf diesen Satz setzen; wenn gerade abgespielt
+            // wird, dort sofort weiterlesen
+            var seg = currentStory && currentStory.sentences ? currentStory.sentences[idx] : null;
+            if (seg) {
+              var wasPlaying = ttsPlaying;
+              if (wasPlaying) {
+                ttsSession++;
+                ttsPlaying = false;
+                if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e2) {} }
+                if (aiAudioEl) { try { aiAudioEl.pause(); } catch (e2) {} aiAudioEl = null; }
+                if (readingCharInterval) { clearInterval(readingCharInterval); readingCharInterval = null; }
+                setCurrentReadingChar(-1, -1);
+              }
+              currentTime = seg.start;
+              ttsSentenceIndex = idx;
+              updateTimeDisplay();
+              if (wasPlaying) togglePlay();
+            }
           };
         })(s);
       }
@@ -1786,21 +2077,21 @@
 
           span.addEventListener("mousedown", handlePressStart);
           span.addEventListener("touchstart", handlePressStart, { passive: true });
-          span.addEventListener("mouseup", release);
-          // Kein mouseleave: Wenn die Wortbox nachträglich höher wird (asynchrone
-          // Übersetzung), verschiebt sich der Text unter dem Zeiger und mouseleave
-          // würde die Anzeige sofort wieder schließen. Loslassen wird global
-          // über document mouseup erkannt.
-          span.addEventListener("touchend", release);
-          span.addEventListener("touchcancel", release);
-          // Beim Scrollen (Finger bewegt sich) Wortanzeige schließen
+          // Die Wortbox bleibt nach dem Loslassen STEHEN (damit man Speichern/
+          // Vorlesen anklicken kann). Geschlossen wird sie per Klick außerhalb,
+          // Satz-Klick oder beim Scrollen (touchmove).
           span.addEventListener("touchmove", release, { passive: true });
           span.addEventListener("contextmenu", function(e) { e.preventDefault(); });
         })(charSpans[k]);
       }
       if (!pressedWordGlobalHandlersBound) {
-        document.addEventListener("mouseup", clearPressedWord);
-        document.addEventListener("touchend", clearPressedWord);
+        document.addEventListener("click", function(e) {
+          if (!pressedWordState) return;
+          var tEl = e.target;
+          if (tEl && tEl.closest && tEl.closest("#selected-sentence-box")) return; // Klick in der Box
+          if (tEl && tEl.classList && tEl.classList.contains("char")) return; // neues Wort gedrückt
+          clearPressedWord();
+        });
         pressedWordGlobalHandlersBound = true;
       }
       updateTimeDisplay();
@@ -2372,6 +2663,7 @@
       if (screenId === "paste") initPasteScreen();
       if (screenId === "numbers") initNumberTrainer();
       if (screenId === "stats") renderStats();
+      if (screenId === "srs") renderSrsScreen();
     }
 
     // ── Paste / Free Text Reader ────────────────────────────────────────
@@ -2458,9 +2750,19 @@
         wordBox.className = "selected-sentence-box";
         wordBox.innerHTML =
           '<div class="translation-top"><strong>' + escapeHtml(entry.word || "") + '</strong>' +
-          (pinyin ? ' <span style="font-weight:400;color:#555">' + escapeHtml(pinyin) + '</span>' : '') +
+          ' <span class="pw-pinyin" style="font-weight:400;color:#555">' + escapeHtml(pinyin) + '</span>' +
           '</div>' +
           '<div class="pinyin-top">' + (meaningKnown ? escapeHtml(meaning) : escapeHtml(t("translating"))) + '</div>';
+        if (!pinyin && entry.word) {
+          var wordForPy = entry.word;
+          fetchPinyin(wordForPy, function(py) {
+            if (!py) return;
+            var strongPy = wordBox.querySelector(".translation-top strong");
+            if (!strongPy || strongPy.textContent !== wordForPy) return;
+            var pyEl = wordBox.querySelector(".pw-pinyin");
+            if (pyEl) pyEl.textContent = py;
+          });
+        }
         if (!meaningKnown && entry.word) {
           var wordAtRequest = entry.word;
           smartTranslate(wordAtRequest, "zh-CN", function(tr) {
